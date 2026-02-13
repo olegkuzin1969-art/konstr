@@ -27,15 +27,84 @@ const state = {
   isLoading: false,
 };
 
-// ========== AUTH (демо, без сервера) ==========
+// ========== AUTH (TMA + Telegram Widget → Supabase, 1 аккаунт по telegram_id) ==========
+
+const API_BASE = ''; // тот же домен
+
+function isInTelegramWebApp() {
+  return !!(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData);
+}
+
+async function fetchConfig() {
+  const r = await fetch(API_BASE + '/api/config');
+  return r.json();
+}
+
+async function authViaTelegram(type, payload) {
+  const r = await fetch(API_BASE + '/api/auth-telegram', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, ...payload }),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.error || 'Auth failed');
+  }
+  return r.json();
+}
+
+async function tryTmaLogin() {
+  if (!isInTelegramWebApp()) return false;
+  const initData = window.Telegram.WebApp.initData;
+  if (!initData) return false;
+  try {
+    const { user } = await authViaTelegram('tma', { initData });
+    state.user = { ...user, photo_url: user.photo_url };
+    localStorage.setItem('user', JSON.stringify(state.user));
+    if (window.Telegram?.WebApp?.ready) window.Telegram.WebApp.ready();
+    if (window.Telegram?.WebApp?.expand) window.Telegram.WebApp.expand();
+    return true;
+  } catch (e) {
+    console.warn('TMA auth failed:', e);
+    return false;
+  }
+}
+
+window.KonstructAuth = {
+  onWidgetAuth: async function(telegramUser) {
+    try {
+      const { user } = await authViaTelegram('widget', { widgetData: telegramUser });
+      state.user = { ...user, photo_url: user.photo_url };
+      localStorage.setItem('user', JSON.stringify(state.user));
+      updateProfileUI();
+      closeProfileDropdown();
+      render();
+    } catch (e) {
+      alert(state.lang === 'ru' ? 'Ошибка входа' : 'Login failed');
+    }
+  },
+};
 
 function checkSavedAuth() {
-  const user = localStorage.getItem('user');
-  if (user) {
+  const saved = localStorage.getItem('user');
+  if (saved) {
     try {
-      state.user = JSON.parse(user);
+      state.user = JSON.parse(saved);
     } catch {}
   }
+}
+
+async function initAuth() {
+  checkSavedAuth();
+  if (state.user) {
+    updateProfileUI();
+    return;
+  }
+  if (await tryTmaLogin()) {
+    updateProfileUI();
+    return;
+  }
+  updateProfileUI();
 }
 
 function logout() {
@@ -44,6 +113,7 @@ function logout() {
   localStorage.removeItem('user');
   updateProfileUI();
   closeProfileDropdown();
+  render();
 }
 
 // ========== ORDERS (демо) ==========
@@ -744,7 +814,7 @@ function renderHome() {
             </div>
             <div class="field">
               <div class="stacked-label">${tContacts.telegram}</div>
-              <div class="tag">@konstruct_app</div>
+              <div class="tag"><a href="https://t.me/k0nstruct_bot" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">@k0nstruct_bot</a></div>
             </div>
             </div>
             <div class="neo-card">
@@ -826,6 +896,8 @@ function renderHome() {
       if (!email) return;
       if (!state.user) {
         setUser({ email });
+      } else if (!state.user.email && email) {
+        setUser({ ...state.user, email });
       }
       createOrder();
     });
@@ -1010,14 +1082,24 @@ function updateProfileUI() {
       </svg>
     `;
     contentEl.innerHTML = `
-      <div id="auth-step-1">
-        <p style="font-size: 13px; color: var(--text-muted); margin: 0; text-align: center;">
-          ${state.lang === 'ru'
-            ? 'Сайт работает в демо-режиме без входа.'
-            : 'The site works in demo mode without sign-in.'}
+      <div id="auth-telegram-widget">
+        <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 12px; text-align: center;">
+          ${state.lang === 'ru' ? 'Войдите через Telegram' : 'Log in with Telegram'}
         </p>
+        <div id="tg-widget-container"></div>
       </div>
     `;
+    const container = document.getElementById('tg-widget-container');
+    if (container) {
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = 'https://telegram.org/js/telegram-widget.js?22';
+      script.setAttribute('data-telegram-login', 'k0nstruct_bot');
+      script.setAttribute('data-size', 'medium');
+      script.setAttribute('data-onauth', 'onTelegramAuth(user)');
+      script.setAttribute('data-request-access', 'write');
+      container.appendChild(script);
+    }
   }
 }
 
@@ -1111,12 +1193,10 @@ function initShell() {
     render();
   });
 
-  checkSavedAuth();
+  state.blogPosts = getDemoBlogPosts();
   initProfile();
 
-  state.blogPosts = getDemoBlogPosts();
-  
-  render();
+  initAuth().then(() => render());
 }
 
 initShell();
