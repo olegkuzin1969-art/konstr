@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Конструкт — Конструктор СНС</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="container header-inner">
+        <div class="header-left">
+          <a href="#hero" class="logo">Конструкт</a>
+          <div class="lang-switch" aria-label="Выбор языка">
+            <button class="lang-btn lang-btn-active" data-lang="ru">Рус</button>
+            <button class="lang-btn" data-lang="en">Eng</button>
+          </div>
+        </div>
+        <button class="nav-toggle" aria-label="Открыть меню">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <nav class="nav">
+          <a href="#hero" class="nav-link">Главная</a>
+          <a href="#service" class="nav-link">Услуга</a>
+          <a href="#blog" class="nav-link">Блог</a>
+          <a href="#contacts" class="nav-link">Контакты</a>
+          <a href="#legal" class="nav-link">Документы</a>
+        </nav>
+        <div class="profile-wrapper">
+          <button class="profile-btn" id="profile-btn">
+            <span class="profile-avatar" id="profile-avatar">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+            </span>
+          </button>
+          <div class="profile-dropdown" id="profile-dropdown">
+            <div id="profile-content"></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="container main" id="app-root">
+      <!-- Контент рендерится через app.js -->
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <span>© 2026 Конструкт</span>
+        <div class="footer-links">
+          <a href="#legal-offer" class="link-like">Публичная оферта</a>
+          <a href="#legal-privacy" class="link-like">Политика конфиденциальности</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
