@@ -122,6 +122,12 @@ module.exports = async function handler(req, res) {
 
     if (error) return res.status(500).json({ error: error.message });
 
+    const baseUrl = (process.env.BASE_URL || '').replace(/\/$/, '');
+    let photoUrl = result.photo_url;
+    if (photoUrl && !photoUrl.startsWith('http') && baseUrl) {
+      photoUrl = `${baseUrl}/api/avatar?path=${encodeURIComponent(photoUrl)}`;
+    }
+
     return res.status(200).json({
       user: {
         id: result.id,
@@ -129,7 +135,7 @@ module.exports = async function handler(req, res) {
         first_name: result.first_name,
         last_name: result.last_name,
         username: result.username,
-        photo_url: result.photo_url,
+        photo_url: photoUrl || result.photo_url,
       },
     });
   } catch (err) {

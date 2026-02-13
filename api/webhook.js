@@ -18,6 +18,30 @@ async function sendMessage(chatId, text, extra = {}) {
   });
 }
 
+async function getUserPhotoPath(userId) {
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getUserProfilePhotos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, limit: 1 }),
+    });
+    const data = await r.json();
+    if (!data.ok || !data.result?.photos?.length) return null;
+    const sizes = data.result.photos[0];
+    const largest = sizes[sizes.length - 1];
+    const fr = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file_id: largest.file_id }),
+    });
+    const fileData = await fr.json();
+    if (!fileData.ok || !fileData.result?.file_path) return null;
+    return fileData.result.file_path;
+  } catch {
+    return null;
+  }
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   if (!BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN not set' });
@@ -42,6 +66,7 @@ module.exports = async function handler(req, res) {
       const from = msg.from;
       if (!from) return res.status(200).json({ ok: true });
 
+      const photoPath = await getUserPhotoPath(from.id);
       const code = genCode();
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       await supabase.from('login_codes').insert({
@@ -50,7 +75,7 @@ module.exports = async function handler(req, res) {
         first_name: from.first_name || null,
         last_name: from.last_name || null,
         username: from.username || null,
-        photo_url: from.photo_url || null,
+        photo_url: photoPath || null,
       });
 
       const link = `${BASE_URL || 'https://твой-сайт.vercel.app'}?code=${code}`;

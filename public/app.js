@@ -1063,7 +1063,7 @@ function updateProfileUI() {
     const photoUrl = state.user.photo_url;
     
     if (photoUrl) {
-      avatarEl.innerHTML = `<img src="${photoUrl}" alt="avatar">`;
+      avatarEl.innerHTML = `<img src="${photoUrl}" alt="avatar" onerror="this.outerHTML='<span class=\\'profile-avatar-letter\\'>${firstLetter}</span>'">`;
     } else {
       avatarEl.innerHTML = `<span class="profile-avatar-letter">${firstLetter}</span>`;
     }
@@ -1071,7 +1071,7 @@ function updateProfileUI() {
     contentEl.innerHTML = `
       <div class="profile-info">
         <div class="profile-info-avatar">
-          ${photoUrl ? `<img src="${photoUrl}" alt="">` : firstLetter}
+          ${photoUrl ? `<img src="${photoUrl}" alt="" onerror="this.outerHTML='${firstLetter}'">` : firstLetter}
         </div>
         <div class="profile-info-text">
           <div class="profile-info-name">${state.user.first_name || 'Пользователь'}</div>
