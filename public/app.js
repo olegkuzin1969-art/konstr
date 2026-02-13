@@ -70,20 +70,17 @@ async function tryTmaLogin() {
   }
 }
 
-window.KonstructAuth = {
-  onWidgetAuth: async function(telegramUser) {
-    try {
-      const { user } = await authViaTelegram('widget', { widgetData: telegramUser });
-      state.user = { ...user, photo_url: user.photo_url };
-      localStorage.setItem('user', JSON.stringify(state.user));
-      updateProfileUI();
-      closeProfileDropdown();
-      render();
-    } catch (e) {
-      alert(state.lang === 'ru' ? 'Ошибка входа' : 'Login failed');
-    }
-  },
-};
+async function loginByCode(code) {
+  const { user } = await authViaTelegram('code', { code });
+  state.user = { ...user };
+  localStorage.setItem('user', JSON.stringify(state.user));
+  closeProfileDropdown();
+  updateProfileUI();
+  render();
+  if (typeof window !== 'undefined' && window.history) {
+    window.history.replaceState({}, '', window.location.pathname || '/');
+  }
+}
 
 function checkSavedAuth() {
   const saved = localStorage.getItem('user');
@@ -103,6 +100,15 @@ async function initAuth() {
   if (await tryTmaLogin()) {
     updateProfileUI();
     return;
+  }
+  const urlCode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('code');
+  if (urlCode) {
+    try {
+      await loginByCode(urlCode);
+      return;
+    } catch (e) {
+      alert(state.lang === 'ru' ? 'Код неверный или истёк' : 'Invalid or expired code');
+    }
   }
   updateProfileUI();
 }
@@ -1082,23 +1088,28 @@ function updateProfileUI() {
       </svg>
     `;
     contentEl.innerHTML = `
-      <div id="auth-telegram-widget">
+      <div id="auth-by-code">
         <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 12px; text-align: center;">
-          ${state.lang === 'ru' ? 'Войдите через Telegram' : 'Log in with Telegram'}
+          ${state.lang === 'ru' ? 'Отправь /login боту @k0nstruct_bot, введи код:' : 'Send /login to @k0nstruct_bot, enter code:'}
         </p>
-        <div id="tg-widget-container"></div>
+        <input type="text" id="login-code-input" class="input" placeholder="XXXX" maxlength="8" style="margin-bottom:8px; text-align:center; letter-spacing:4px" />
+        <button class="primary-btn full-width" id="login-code-btn">${state.lang === 'ru' ? 'Войти' : 'Log in'}</button>
       </div>
     `;
-    const container = document.getElementById('tg-widget-container');
-    if (container) {
-      const script = document.createElement('script');
-      script.async = true;
-      script.src = 'https://telegram.org/js/telegram-widget.js?22';
-      script.setAttribute('data-telegram-login', 'k0nstruct_bot');
-      script.setAttribute('data-size', 'medium');
-      script.setAttribute('data-onauth', 'onTelegramAuth(user)');
-      script.setAttribute('data-request-access', 'write');
-      container.appendChild(script);
+    const input = document.getElementById('login-code-input');
+    const btn = document.getElementById('login-code-btn');
+    if (input && btn) {
+      const doLogin = () => {
+        const code = input.value.trim();
+        if (!code) return;
+        btn.disabled = true;
+        loginByCode(code).catch((e) => {
+          alert(state.lang === 'ru' ? 'Код неверный или истёк' : 'Invalid or expired code');
+          btn.disabled = false;
+        });
+      };
+      btn.addEventListener('click', doLogin);
+      input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
     }
   }
 }

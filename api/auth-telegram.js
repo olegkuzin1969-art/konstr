@@ -76,6 +76,28 @@ module.exports = async function handler(req, res) {
         username: widgetData.username || '',
         photo_url: widgetData.photo_url || '',
       };
+    } else if (type === 'code' && body.code) {
+      const code = String(body.code).trim().toUpperCase();
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const { data: row, error: fetchErr } = await supabase
+        .from('login_codes')
+        .select('*')
+        .eq('code', code)
+        .single();
+      if (fetchErr || !row) return res.status(401).json({ error: 'Неверный или устаревший код' });
+      const age = (Date.now() - new Date(row.created_at).getTime()) / 60000;
+      if (age > 5) {
+        await supabase.from('login_codes').delete().eq('code', code);
+        return res.status(401).json({ error: 'Код истёк' });
+      }
+      user = {
+        id: row.telegram_id,
+        first_name: row.first_name,
+        last_name: row.last_name || '',
+        username: row.username || '',
+        photo_url: row.photo_url || '',
+      };
+      await supabase.from('login_codes').delete().eq('code', code);
     } else {
       return res.status(400).json({ error: 'Invalid request' });
     }
