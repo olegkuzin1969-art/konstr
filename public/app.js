@@ -26,6 +26,7 @@ const state = {
   checkoutOrderId: null,
   isLoading: false,
   profileTab: "drafts",
+  editingDraftId: null,
 };
 
 // ========== AUTH (TMA + Telegram Widget → Supabase, 1 аккаунт по telegram_id) ==========
@@ -581,6 +582,20 @@ function toggleService(key) {
   refreshLetterPreview();
 }
 
+function clearConstructorForm() {
+  state.constructorForm = {
+    fullName: "",
+    address: "",
+    ukName: "",
+    ukAddress: "",
+    period: "",
+    emailForReply: "",
+    services: { content: true, heating: false, water: false, repair: false },
+  };
+  state.withExpert = false;
+  state.editingDraftId = null;
+}
+
 async function saveDraft() {
   if (!state.user) {
     alert(I18N[state.lang].alerts.mustLogin);
@@ -591,9 +606,22 @@ async function saveDraft() {
     withExpert: state.withExpert,
   };
   try {
-    await saveDraftToApi(draftData);
-    state.draft = draftData;
-    alert(state.lang === 'ru' ? 'Черновик сохранён в профиль' : 'Draft saved to profile');
+    const editingId = state.editingDraftId;
+    if (editingId) {
+      await updateDraftInApi(editingId, draftData);
+      clearConstructorForm();
+      state.profileDrafts = (state.profileDrafts || []).map((d) =>
+        d.id === editingId ? { ...d, data: draftData, updated_at: new Date().toISOString() } : d
+      );
+      alert(state.lang === 'ru' ? 'Черновик обновлён' : 'Draft updated');
+    } else {
+      const created = await saveDraftToApi(draftData);
+      clearConstructorForm();
+      if (created) {
+        state.profileDrafts = [{ ...created }, ...(state.profileDrafts || [])];
+      }
+      alert(state.lang === 'ru' ? 'Черновик сохранён в профиль' : 'Draft saved to profile');
+    }
     render();
   } catch (e) {
     alert(state.lang === 'ru' ? 'Ошибка сохранения: ' + (e.message || 'Проверьте подключение') : 'Save error: ' + (e.message || 'Check connection'));
@@ -1067,6 +1095,7 @@ function formatDraftPreview(d) {
 function loadDraftIntoConstructor(draft) {
   if (!draft?.data) return;
   const d = draft.data;
+  state.editingDraftId = draft.id;
   state.constructorForm = {
     fullName: d.fullName || '',
     address: d.address || '',
@@ -1139,7 +1168,8 @@ async function renderProfile() {
   const displayName = state.user.first_name || state.user.username || (state.lang === 'ru' ? 'Пользователь' : 'User');
   const username = state.user.username ? '@' + state.user.username : '';
 
-  state.isLoading = true;
+  const hasCachedDrafts = Array.isArray(state.profileDrafts);
+  state.isLoading = !hasCachedDrafts;
   appRoot.innerHTML = `
     <div class="landing">
       <section id="profile" class="section hero-section section-visible">
@@ -1160,7 +1190,7 @@ async function renderProfile() {
           </div>
           <div id="profile-tab-content">
             <div id="profile-drafts-list" class="profile-tab-pane profile-drafts-list" style="${state.profileTab === 'drafts' ? '' : 'display:none'}">
-              <p class="small muted-text">${state.lang === 'ru' ? 'Загрузка...' : 'Loading...'}</p>
+              ${hasCachedDrafts ? (state.profileDrafts.length === 0 ? `<p class="small muted-text">${t.empty}</p>` : '') : `<p class="small muted-text">${state.lang === 'ru' ? 'Загрузка...' : 'Loading...'}</p>`}
             </div>
             <div id="profile-orders-list" class="profile-tab-pane profile-orders-list" style="${state.profileTab === 'orders' ? '' : 'display:none'}">
               <p class="small muted-text">${t.ordersEmpty}</p>
@@ -1171,11 +1201,13 @@ async function renderProfile() {
     </div>
   `;
 
-  try {
-    const drafts = await fetchDrafts();
-    state.profileDrafts = drafts;
-  } catch (e) {
-    state.profileDrafts = [];
+  if (!hasCachedDrafts) {
+    try {
+      const drafts = await fetchDrafts();
+      state.profileDrafts = drafts;
+    } catch (e) {
+      state.profileDrafts = [];
+    }
   }
   state.isLoading = false;
 
@@ -1378,10 +1410,24 @@ function updateProfileUI() {
   }
 }
 
+function prefetchProfileDrafts() {
+  if (state.user && !state.profileDraftsLoading) {
+    state.profileDraftsLoading = true;
+    fetchDrafts()
+      .then((drafts) => {
+        state.profileDrafts = drafts;
+        state.profileDraftsLoading = false;
+      })
+      .catch(() => { state.profileDraftsLoading = false; });
+  }
+}
+
 function toggleProfileDropdown() {
   const dropdown = document.getElementById('profile-dropdown');
   if (dropdown) {
+    const willOpen = !dropdown.classList.contains('open');
     dropdown.classList.toggle('open');
+    if (willOpen) prefetchProfileDrafts();
   }
 }
 
@@ -1394,6 +1440,7 @@ function closeProfileDropdown() {
 
 function goToDashboard() {
   closeProfileDropdown();
+  prefetchProfileDrafts();
   window.location.hash = '#profile';
   render();
 }
