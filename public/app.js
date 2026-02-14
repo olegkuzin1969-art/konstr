@@ -71,9 +71,11 @@ async function tryTmaLogin() {
 }
 
 async function loginByCode(code) {
-  const { user } = await authViaTelegram('code', { code });
-  state.user = { ...user };
+  const res = await authViaTelegram('code', { code });
+  state.user = { ...res.user };
+  if (res.token) state.token = res.token;
   localStorage.setItem('user', JSON.stringify(state.user));
+  if (res.token) localStorage.setItem('drafts_token', res.token);
   closeProfileDropdown();
   updateProfileUI();
   render();
@@ -89,6 +91,8 @@ function checkSavedAuth() {
       state.user = JSON.parse(saved);
     } catch {}
   }
+  const tok = localStorage.getItem('drafts_token');
+  if (tok) state.token = tok;
 }
 
 async function initAuth() {
@@ -117,9 +121,55 @@ function logout() {
   state.token = null;
   state.user = null;
   localStorage.removeItem('user');
+  localStorage.removeItem('drafts_token');
   updateProfileUI();
   closeProfileDropdown();
   render();
+}
+
+// ========== DRAFTS (API + БД) ==========
+
+async function draftsApi(method, body = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  let url = API_BASE + '/api/drafts';
+  let payload = { ...body };
+  if (isInTelegramWebApp() && window.Telegram?.WebApp?.initData) {
+    payload.initData = window.Telegram.WebApp.initData;
+  } else if (state.token) {
+    headers['Authorization'] = 'Bearer ' + state.token;
+  } else {
+    throw new Error('Необходима авторизация');
+  }
+  if (method === 'GET' && payload.initData) {
+    url += '?initData=' + encodeURIComponent(payload.initData);
+  }
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: method !== 'GET' ? JSON.stringify(payload) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Ошибка запроса');
+  return data;
+}
+
+async function fetchDrafts() {
+  const data = await draftsApi('GET');
+  return data.drafts || [];
+}
+
+async function saveDraftToApi(draftData) {
+  const data = await draftsApi('POST', { data: draftData });
+  return data.draft;
+}
+
+async function updateDraftInApi(id, draftData) {
+  const data = await draftsApi('PUT', { id, data: draftData });
+  return data.draft;
+}
+
+async function deleteDraftFromApi(id) {
+  await draftsApi('DELETE', { id });
 }
 
 // ========== ORDERS (демо) ==========
@@ -268,7 +318,7 @@ const I18N = {
       email: "Email для ответа (необязательно)",
       emailPlaceholder: "Если хотите получить ответ по email",
       withExpert: "Хочу проверку эксперта (+1 500 ₽)",
-      saveDraft: "Сохранить черновик (демо)",
+      saveDraft: "Сохранить черновик",
       createOrder: "Создать заказ (демо)",
       hint:
         "В полноценной версии после заполнения формы откроется выбор тарифа и виджет оплаты. Здесь мы показываем только UX конструктора.",
@@ -319,6 +369,14 @@ const I18N = {
       privacyTitle: "Политика конфиденциальности",
       privacyBody:
         "Описывает, как обрабатываются персональные данные пользователей сервиса. Сейчас это заглушка, чтобы показать наличие раздела и ссылок в футере.",
+    },
+    profile: {
+      title: "Мои черновики",
+      subtitle: "Сохранённые запросы в УК. Нажмите, чтобы продолжить редактирование.",
+      empty: "Нет сохранённых черновиков.",
+      loginHint: "Войдите, чтобы сохранять и видеть черновики.",
+      loadDraft: "Открыть",
+      deleteDraft: "Удалить",
     },
     alerts: {
       draftSaved:
@@ -414,7 +472,7 @@ const I18N = {
       email: "Email for reply (optional)",
       emailPlaceholder: "If you want to receive a reply by email",
       withExpert: "I want expert review (+1 500 ₽)",
-      saveDraft: "Save draft (demo)",
+      saveDraft: "Save draft",
       createOrder: "Create order (demo)",
       hint:
         "In the full version you will proceed to plan selection and a payment widget. Here we only showcase the UX.",
@@ -477,6 +535,14 @@ const I18N = {
         "Payment of 2 200 ₽ was \"processed\". The request was sent to an expert for review (demo).",
       enterEmail: "Enter email to link the order (demo):",
     },
+    profile: {
+      title: "My drafts",
+      subtitle: "Saved requests to MC. Click to continue editing.",
+      empty: "No saved drafts.",
+      loginHint: "Log in to save and view drafts.",
+      loadDraft: "Open",
+      deleteDraft: "Delete",
+    },
   },
 };
 
@@ -508,12 +574,23 @@ function toggleService(key) {
   refreshLetterPreview();
 }
 
-function saveDraft() {
-  state.draft = {
+async function saveDraft() {
+  if (!state.user) {
+    alert(I18N[state.lang].alerts.mustLogin);
+    return;
+  }
+  const draftData = {
     ...state.constructorForm,
     withExpert: state.withExpert,
   };
-  alert(I18N[state.lang].alerts.draftSaved);
+  try {
+    await saveDraftToApi(draftData);
+    state.draft = draftData;
+    alert(state.lang === 'ru' ? 'Черновик сохранён в профиль' : 'Draft saved to profile');
+    render();
+  } catch (e) {
+    alert(state.lang === 'ru' ? 'Ошибка сохранения: ' + (e.message || 'Проверьте подключение') : 'Save error: ' + (e.message || 'Check connection'));
+  }
 }
 
 function createOrder() {
@@ -601,6 +678,8 @@ function render() {
   const hash = window.location.hash;
   if (hash === "#blog" || hash.startsWith("#blog/")) {
     renderBlog();
+  } else if (hash === "#profile") {
+    renderProfile();
   } else {
     renderHome();
   }
@@ -969,6 +1048,120 @@ function renderHome() {
   }
 }
 
+// ========== PROFILE PAGE (черновики) ==========
+
+function formatDraftPreview(d) {
+  if (!d) return '';
+  const uk = d.ukName || (state.lang === 'ru' ? 'УК не указана' : 'MC not specified');
+  const period = d.period || '';
+  return [uk, period].filter(Boolean).join(' · ') || (state.lang === 'ru' ? 'Черновик' : 'Draft');
+}
+
+function loadDraftIntoConstructor(draft) {
+  if (!draft?.data) return;
+  const d = draft.data;
+  state.constructorForm = {
+    fullName: d.fullName || '',
+    address: d.address || '',
+    ukName: d.ukName || '',
+    ukAddress: d.ukAddress || '',
+    period: d.period || '',
+    emailForReply: d.emailForReply || '',
+    services: d.services || { content: true, heating: false, water: false, repair: false },
+  };
+  state.withExpert = !!d.withExpert;
+  window.location.hash = '#constructor';
+  render();
+}
+
+async function deleteDraft(id) {
+  if (!confirm(state.lang === 'ru' ? 'Удалить черновик?' : 'Delete draft?')) return;
+  try {
+    await deleteDraftFromApi(id);
+    state.profileDrafts = (state.profileDrafts || []).filter((d) => d.id !== id);
+    render();
+  } catch (e) {
+    alert(state.lang === 'ru' ? 'Ошибка удаления' : 'Delete error');
+  }
+}
+
+async function renderProfile() {
+  const t = I18N[state.lang].profile;
+  applyLanguageToShell();
+
+  if (!state.user) {
+    appRoot.innerHTML = `
+      <div class="landing">
+        <section id="profile" class="section hero-section">
+          <div class="neo-card section-shell">
+            <h2 class="section-title">${t.title}</h2>
+            <p class="section-subtitle">${t.loginHint}</p>
+            <a href="#" class="primary-btn" onclick="document.getElementById('profile-btn')?.click(); return false;">${state.lang === 'ru' ? 'Войти' : 'Log in'}</a>
+          </div>
+        </section>
+      </div>
+    `;
+    return;
+  }
+
+  state.isLoading = true;
+  appRoot.innerHTML = `
+    <div class="landing">
+      <section id="profile" class="section hero-section">
+        <div class="neo-card section-shell">
+          <h2 class="section-title">${t.title}</h2>
+          <p class="section-subtitle">${t.subtitle}</p>
+          <div id="profile-drafts-list" class="profile-drafts-list">
+            <p class="small muted-text">${state.lang === 'ru' ? 'Загрузка...' : 'Loading...'}</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  `;
+
+  try {
+    const drafts = await fetchDrafts();
+    state.profileDrafts = drafts;
+  } catch (e) {
+    state.profileDrafts = [];
+  }
+  state.isLoading = false;
+
+  const listEl = document.getElementById('profile-drafts-list');
+  if (listEl) {
+    if (state.profileDrafts.length === 0) {
+      listEl.innerHTML = `<p class="small muted-text">${t.empty}</p>`;
+    } else {
+      listEl.innerHTML = state.profileDrafts
+        .map(
+          (d, i) => `
+        <div class="neo-card draft-card" style="margin-bottom:12px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <div class="draft-preview" style="flex:1;min-width:0">
+            <div class="draft-title" style="font-weight:600;margin-bottom:4px">${formatDraftPreview(d.data)}</div>
+            <div class="small muted-text">${new Date(d.updated_at || d.created_at).toLocaleDateString()}</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0">
+            <button class="secondary-btn draft-load-btn" data-draft-index="${i}">${t.loadDraft}</button>
+            <button class="secondary-btn draft-delete-btn" data-draft-id="${d.id}" style="color:var(--danger, #c33)">${t.deleteDraft}</button>
+          </div>
+        </div>
+      `
+        )
+        .join('');
+      listEl.querySelectorAll('.draft-load-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.getAttribute('data-draft-index'), 10);
+          const d = state.profileDrafts[idx];
+          if (d) loadDraftIntoConstructor(d);
+        });
+      });
+      listEl.querySelectorAll('.draft-delete-btn').forEach((btn) => {
+        btn.addEventListener('click', () => deleteDraft(btn.getAttribute('data-draft-id')));
+      });
+    }
+  }
+}
+
 // ========== BLOG PAGE ==========
 
 function renderBlog() {
@@ -1130,7 +1323,8 @@ function closeProfileDropdown() {
 
 function goToDashboard() {
   closeProfileDropdown();
-  alert(state.lang === 'ru' ? 'Личный кабинет в разработке' : 'Dashboard coming soon');
+  window.location.hash = '#profile';
+  render();
 }
 
 function initProfile() {

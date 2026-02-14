@@ -1,6 +1,28 @@
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
+function createSessionToken(userId) {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const payload = { sub: userId, exp: Math.floor(Date.now() / 1000) + 7 * 24 * 3600 };
+  const b64 = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');
+  const sign = crypto.createHmac('sha256', BOT_TOKEN).update(`${b64(header)}.${b64(payload)}`).digest('base64url');
+  return `${b64(header)}.${b64(payload)}.${sign}`;
+}
+
+function verifySessionToken(token) {
+  if (!token) return null;
+  try {
+    const [headerB64, payloadB64, sig] = token.split('.');
+    const expected = crypto.createHmac('sha256', BOT_TOKEN).update(`${headerB64}.${payloadB64}`).digest('base64url');
+    if (sig !== expected) return null;
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
+    return payload.sub;
+  } catch {
+    return null;
+  }
+}
+
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -128,7 +150,7 @@ module.exports = async function handler(req, res) {
       photoUrl = `${baseUrl}/api/avatar?path=${encodeURIComponent(photoUrl)}`;
     }
 
-    return res.status(200).json({
+    const response = {
       user: {
         id: result.id,
         telegram_id: result.telegram_id,
@@ -137,7 +159,11 @@ module.exports = async function handler(req, res) {
         username: result.username,
         photo_url: photoUrl || result.photo_url,
       },
-    });
+    };
+    if (body.type === 'code') {
+      response.token = createSessionToken(result.id);
+    }
+    return res.status(200).json(response);
   } catch (err) {
     console.error('auth-telegram error:', err);
     return res.status(500).json({ error: err.message });
