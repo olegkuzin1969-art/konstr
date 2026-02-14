@@ -72,7 +72,7 @@ html {
 }
 
 .tg-miniapp .header-inner {
-  padding-top: calc(14px + env(safe-area-inset-top, 0) + 70px);
+  padding-top: calc(14px + env(safe-area-inset-top, 0) + 32px);
 }
 
 .header-left {
@@ -337,7 +337,7 @@ html {
 }
 
 .tg-miniapp .main {
-  padding-top: calc(130px + env(safe-area-inset-top, 0) + 32px);
+  padding-top: calc(92px + env(safe-area-inset-top, 0) + 32px);
   padding-bottom: calc(48px + env(safe-area-inset-bottom, 0) + 56px);
 }
 
