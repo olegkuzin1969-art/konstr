@@ -59,12 +59,7 @@ module.exports = async function handler(req, res) {
         ? `Привет! 👋\n\nСервис «Конструкт» — помогаю собрать официальный запрос в управляющую компанию по 402-ФЗ.\n\n📋 Выберите действие:\n\n<em>Для входа на сайт: /login</em>`
         : `Привет! 👋\n\nСервис «Конструкт» — помогаю собрать официальный запрос в управляющую компанию по 402-ФЗ.\n\n🔐 Чтобы войти на сайт: отправь /login`;
       const menu = BASE_URL ? {
-        inline_keyboard: [
-          [{ text: '📝 Создать запрос', web_app: { url: BASE_URL } }],
-          [{ text: '📁 Мои документы', web_app: { url: BASE_URL } }],
-          [{ text: '📰 Блог', web_app: { url: `${BASE_URL}#blog` } }],
-          [{ text: '💬 Поддержка', web_app: { url: `${BASE_URL}#contacts` } }],
-        ],
+        inline_keyboard: [[{ text: '📝 Создать запрос', web_app: { url: BASE_URL } }]],
       } : undefined;
       await sendMessage(chatId, t, menu ? { reply_markup: menu } : {});
       return res.status(200).json({ ok: true });
@@ -72,12 +67,7 @@ module.exports = async function handler(req, res) {
 
     if (text === '/menu' && BASE_URL) {
       const menu = {
-        inline_keyboard: [
-          [{ text: '📝 Создать запрос', web_app: { url: BASE_URL } }],
-          [{ text: '📁 Мои документы', web_app: { url: BASE_URL } }],
-          [{ text: '📰 Блог', web_app: { url: `${BASE_URL}#blog` } }],
-          [{ text: '💬 Поддержка', web_app: { url: `${BASE_URL}#contacts` } }],
-        ],
+        inline_keyboard: [[{ text: '📝 Создать запрос', web_app: { url: BASE_URL } }]],
       };
       await sendMessage(chatId, 'Выберите действие:', { reply_markup: menu });
       return res.status(200).json({ ok: true });
