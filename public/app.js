@@ -955,7 +955,14 @@ function buildPdfDocumentHtml(f, ru) {
     </div>`;
 }
 
-function doHtml2Pdf(wrap, filename) {
+function doHtml2Pdf(wrap, filename, overlay) {
+  function cleanup() {
+    wrap.remove();
+    if (overlay && overlay.parentNode) overlay.remove();
+  }
+  // Элемент должен быть видим на экране, иначе html2canvas даёт пустой PDF
+  wrap.style.position = 'relative';
+  wrap.style.left = '0';
   window.html2pdf()
     .set({
       margin: 0,
@@ -966,9 +973,9 @@ function doHtml2Pdf(wrap, filename) {
     })
     .from(wrap)
     .save()
-    .then(() => wrap.remove())
+    .then(cleanup)
     .catch(() => {
-      wrap.remove();
+      cleanup();
       alert(state.lang === 'ru' ? 'Ошибка создания PDF' : 'PDF creation error');
     });
 }
@@ -993,23 +1000,33 @@ function downloadOrderPdf(order) {
   const bodyHtml = buildPdfDocumentHtml(f, ru);
 
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'width:210mm; padding:20mm; background:#fff; font-family:Arial,sans-serif; color:#000; box-sizing:border-box; position:fixed; left:-9999px; top:0;';
+  wrap.style.cssText = 'width:210mm; padding:20mm; background:#fff; font-family:Arial,sans-serif; color:#000; box-sizing:border-box;';
   wrap.innerHTML = headerHtml + titleHtml + bodyHtml;
-  document.body.appendChild(wrap);
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed; inset:0; background:#fff; z-index:10000; overflow:auto; display:flex; justify-content:center; padding:20px 0;';
+  overlay.appendChild(wrap);
+  document.body.appendChild(overlay);
 
   const name = (f.ukName || 'Zapros').replace(/[^a-zA-Zа-яА-Я0-9]/g, '_').slice(0, 30);
   const filename = `Zayavlenie_UK_${name}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
+  function runPdf() {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => doHtml2Pdf(wrap, filename, overlay));
+    });
+  }
+
   if (typeof window.html2pdf !== 'undefined') {
-    doHtml2Pdf(wrap, filename);
+    runPdf();
     return;
   }
 
   const script = document.createElement('script');
   script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-  script.onload = () => doHtml2Pdf(wrap, filename);
+  script.onload = runPdf;
   script.onerror = () => {
-    wrap.remove();
+    overlay.remove();
     alert(state.lang === 'ru' ? 'Не удалось загрузить библиотеку PDF' : 'Failed to load PDF library');
   };
   document.head.appendChild(script);
