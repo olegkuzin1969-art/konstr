@@ -114,9 +114,11 @@ module.exports = async function handler(req, res) {
       if (!verifyInitData(initData)) return res.status(401).json({ error: 'Invalid initData' });
       user = parseUserFromInitData(initData);
       if (!user) return res.status(400).json({ error: 'No user in initData' });
-      if (!user.photo_url) {
+      if (!user.photo_url && !user.photoUrl) {
         const photoPath = await getUserPhotoPath(user.id);
         if (photoPath) user.photo_url = photoPath;
+      } else if (user.photoUrl && !user.photo_url) {
+        user.photo_url = user.photoUrl;
       }
     } else if (type === 'widget' && widgetData) {
       if (!verifyWidgetHash(widgetData)) return res.status(401).json({ error: 'Invalid widget hash' });

@@ -63,13 +63,27 @@ async function authViaTelegram(type, payload) {
   return r.json();
 }
 
+function getTmaPhotoUrl() {
+  try {
+    const u = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    return (u && (u.photo_url || u.photoUrl)) ? (u.photo_url || u.photoUrl) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function tryTmaLogin() {
   if (!isInTelegramWebApp()) return false;
   const initData = window.Telegram.WebApp.initData;
   if (!initData) return false;
   try {
     const { user } = await authViaTelegram('tma', { initData });
-    state.user = { ...user, photo_url: user.photo_url };
+    let photoUrl = user.photo_url;
+    if (!photoUrl) {
+      const tmaPhoto = getTmaPhotoUrl();
+      if (tmaPhoto) photoUrl = tmaPhoto;
+    }
+    state.user = { ...user, photo_url: photoUrl };
     localStorage.setItem('user', JSON.stringify(state.user));
     if (window.Telegram?.WebApp?.ready) window.Telegram.WebApp.ready();
     if (window.Telegram?.WebApp?.expand) window.Telegram.WebApp.expand();
@@ -101,6 +115,13 @@ function checkSavedAuth() {
   if (saved) {
     try {
       state.user = JSON.parse(saved);
+      if (isInTelegramWebApp() && !state.user?.photo_url) {
+        const tmaPhoto = getTmaPhotoUrl();
+        if (tmaPhoto) {
+          state.user = { ...state.user, photo_url: tmaPhoto };
+          localStorage.setItem('user', JSON.stringify(state.user));
+        }
+      }
     } catch {}
   }
   const tok = localStorage.getItem('drafts_token');
