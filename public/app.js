@@ -32,6 +32,9 @@ const state = {
   isLoading: false,
   profileTab: "drafts",
   editingDraftId: null,
+  editingOrderId: null,
+  isAdmin: false,
+  adminOrders: [],
 };
 
 // ========== AUTH (TMA + Telegram Widget → Supabase, 1 аккаунт по telegram_id) ==========
@@ -85,6 +88,8 @@ async function loginByCode(code) {
   if (res.token) localStorage.setItem('drafts_token', res.token);
   closeProfileDropdown();
   updateProfileUI();
+  await checkAdminStatus();
+  updateAdminNav();
   render();
   if (typeof window !== 'undefined' && window.history) {
     window.history.replaceState({}, '', window.location.pathname || '/');
@@ -106,10 +111,14 @@ async function initAuth() {
   checkSavedAuth();
   if (state.user) {
     updateProfileUI();
+    await checkAdminStatus();
+    updateAdminNav();
     return;
   }
   if (await tryTmaLogin()) {
     updateProfileUI();
+    await checkAdminStatus();
+    updateAdminNav();
     return;
   }
   const urlCode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('code');
@@ -213,6 +222,54 @@ async function fetchOrders() {
 async function createOrderApi(orderData) {
   const data = await ordersApi('POST', { data: orderData });
   return data.order;
+}
+
+async function updateOrderInApi(id, orderData) {
+  const data = await ordersApi('PUT', { id, data: orderData });
+  return data.order;
+}
+
+async function adminOrdersApi(method, body = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  let url = API_BASE + '/api/admin-orders';
+  let payload = { ...body };
+  if (isInTelegramWebApp() && window.Telegram?.WebApp?.initData) {
+    payload.initData = window.Telegram.WebApp.initData;
+  } else if (state.token) {
+    headers['Authorization'] = 'Bearer ' + state.token;
+  } else {
+    throw new Error('Необходима авторизация');
+  }
+  if (method === 'GET' && payload.initData) {
+    url += '?initData=' + encodeURIComponent(payload.initData);
+  }
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: method !== 'GET' ? JSON.stringify(payload) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Ошибка запроса');
+  return data;
+}
+
+async function fetchAdminOrders() {
+  const data = await adminOrdersApi('GET');
+  return data.orders || [];
+}
+
+async function patchAdminOrderStatus(id, approved, revision_comment) {
+  const data = await adminOrdersApi('PATCH', { id, approved, revision_comment });
+  return data.order;
+}
+
+async function checkAdminStatus() {
+  try {
+    await adminOrdersApi('GET');
+    state.isAdmin = true;
+  } catch {
+    state.isAdmin = false;
+  }
 }
 
 async function deleteOrderFromApi(id) {
@@ -524,6 +581,20 @@ const I18N = {
 <p>Мы вправе вносить изменения в настоящую Политику. Актуальная версия всегда доступна на данной странице.</p>
 `,
     },
+    admin: {
+      title: "Админ-панель",
+      subtitle: "Все заказы пользователей. Меняйте статус: готов (можно скачать) или на доработку (с комментарием).",
+      empty: "Нет заказов.",
+      statusInWork: "В работе",
+      statusReady: "Готов",
+      statusRevision: "На доработку",
+      setReady: "Завершить (можно скачать)",
+      setRevision: "На доработку",
+      commentPlaceholder: "Комментарий эксперта...",
+      save: "Сохранить",
+      user: "Пользователь",
+      date: "Дата",
+    },
     profile: {
       title: "Профиль",
       tabDrafts: "Черновики",
@@ -747,6 +818,20 @@ const I18N = {
         "Payment of 2 200 ₽ was \"processed\". The request was sent to an expert for review (demo).",
       enterEmail: "Enter email to link the order (demo):",
     },
+    admin: {
+      title: "Admin Panel",
+      subtitle: "All user orders. Change status: ready (can download) or revision (with comment).",
+      empty: "No orders.",
+      statusInWork: "In progress",
+      statusReady: "Ready",
+      statusRevision: "Revision",
+      setReady: "Complete (can download)",
+      setRevision: "Send for revision",
+      commentPlaceholder: "Expert comment...",
+      save: "Save",
+      user: "User",
+      date: "Date",
+    },
     profile: {
       title: "Profile",
       tabDrafts: "Drafts",
@@ -818,6 +903,7 @@ function clearConstructorForm() {
   };
   state.withExpert = false;
   state.editingDraftId = null;
+  state.editingOrderId = null;
 }
 
 async function saveDraft() {
@@ -859,12 +945,21 @@ async function createOrder() {
   }
   const orderData = { ...state.constructorForm, withExpert: state.withExpert };
   try {
-    const created = await createOrderApi(orderData);
-    clearConstructorForm();
-    state.profileOrders = [{ ...created }, ...(state.profileOrders || [])];
-    alert(state.withExpert
-      ? (state.lang === 'ru' ? 'Заказ оформлен. Документ направлен на проверку эксперту. Вы сможете скачать его после одобрения.' : 'Order created. Document sent for expert review. You can download it after approval.')
-      : (state.lang === 'ru' ? 'Заказ оформлен' : 'Order created'));
+    if (state.editingOrderId) {
+      const updated = await updateOrderInApi(state.editingOrderId, orderData);
+      clearConstructorForm();
+      state.profileOrders = (state.profileOrders || []).map((o) =>
+        o.id === state.editingOrderId ? { ...o, ...updated } : o
+      );
+      alert(state.lang === 'ru' ? 'Заказ обновлён и направлен на повторную проверку.' : 'Order updated and sent for re-review.');
+    } else {
+      const created = await createOrderApi(orderData);
+      clearConstructorForm();
+      state.profileOrders = [{ ...created }, ...(state.profileOrders || [])];
+      alert(state.withExpert
+        ? (state.lang === 'ru' ? 'Заказ оформлен. Документ направлен на проверку эксперту. Вы сможете скачать его после одобрения.' : 'Order created. Document sent for expert review. You can download it after approval.')
+        : (state.lang === 'ru' ? 'Заказ оформлен' : 'Order created'));
+    }
     window.location.hash = '#profile';
     render();
   } catch (e) {
@@ -1047,37 +1142,45 @@ function downloadOrderPdf(order) {
   document.head.appendChild(script);
 }
 
-function getOrderStatusLabel(status) {
+function getOrderStatusLabel(approved) {
   const t = I18N[state.lang].profile;
-  const map = { no_review: t.orderStatusNoReview, in_review: t.orderStatusInReview, ready: t.orderStatusReady, revision: t.orderStatusRevision };
-  return map[status] || status || t.orderStatusNoReview;
+  if (approved === true) return t.orderStatusReady;
+  if (approved === false) return t.orderStatusRevision;
+  return t.orderStatusInReview;
 }
 
 function canDownloadOrder(order) {
-  const s = order?.status;
-  return s === 'no_review' || s === 'ready';
+  return order?.approved === true;
+}
+
+function isOrderRevision(order) {
+  return order?.approved === false;
 }
 
 function openOrderModal(order) {
   const t = I18N[state.lang].profile;
-  const status = order?.status || 'no_review';
-  const isRevision = status === 'revision';
   const canDownload = canDownloadOrder(order);
-  const revisionComment = (order?.revision_comment || order?.data?.revision_comment || '').trim();
+  const isRevision = isOrderRevision(order);
   const preview = getLetterPreviewFromData(order?.data);
+  const comment = (order?.revision_comment || '').trim();
 
-  const actionsHtml = isRevision
-    ? `<div class="modal-revision-block" style="background:#fff9e6;border:1px solid #e6c200;border-radius:8px;padding:12px;margin-bottom:16px;">
-        <div class="small" style="font-weight:600;margin-bottom:6px;">${t.orderRevisionHint}</div>
-        ${revisionComment ? `<div class="small muted-text" style="margin-bottom:12px;">${escapeHtml(revisionComment)}</div>` : ''}
-        <button class="primary-btn" id="modal-goto-revision">${t.gotoRevision}</button>
-      </div>
-      <button class="secondary-btn" id="modal-close">${t.close || 'Закрыть'}</button>`
-    : canDownload
-      ? `<button class="primary-btn" id="modal-download">${t.download || 'Скачать'}</button>
-         <button class="secondary-btn" id="modal-close">${t.close || 'Закрыть'}</button>`
-      : `<div class="small muted-text" style="margin-bottom:12px;">${t.orderInReviewHint}</div>
-         <button class="secondary-btn" id="modal-close">${t.close || 'Закрыть'}</button>`;
+  let actionsHtml;
+  if (canDownload) {
+    actionsHtml = `<button class="primary-btn" id="modal-download">${t.download || 'Скачать'}</button>
+       <button class="secondary-btn" id="modal-close">${t.close || 'Закрыть'}</button>`;
+  } else if (isRevision) {
+    actionsHtml = `<div class="revision-comment-block" style="margin-bottom:12px;padding:12px;background:var(--bg-soft, #f5f5f5);border-radius:8px;">
+         <div class="small muted-text" style="margin-bottom:6px;">${state.lang === 'ru' ? 'Комментарий эксперта:' : 'Expert comment:'}</div>
+         <div class="small">${comment ? escapeHtml(comment) : (state.lang === 'ru' ? '—' : '—')}</div>
+       </div>
+       <div style="display:flex;gap:8px;flex-wrap:wrap;">
+         <button class="primary-btn" id="modal-edit">${state.lang === 'ru' ? 'Отредактировать' : 'Edit'}</button>
+         <button class="secondary-btn" id="modal-close">${t.close || 'Закрыть'}</button>
+       </div>`;
+  } else {
+    actionsHtml = `<div class="small muted-text" style="margin-bottom:12px;">${t.orderInReviewHint}</div>
+       <button class="secondary-btn" id="modal-close">${t.close || 'Закрыть'}</button>`;
+  }
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -1098,25 +1201,10 @@ function openOrderModal(order) {
   const btnDownload = overlay.querySelector('#modal-download');
   if (btnDownload) btnDownload.addEventListener('click', () => { downloadOrderPdf(order); });
 
-  const btnGotoRevision = overlay.querySelector('#modal-goto-revision');
-  if (btnGotoRevision) btnGotoRevision.addEventListener('click', async () => {
+  const btnEdit = overlay.querySelector('#modal-edit');
+  if (btnEdit) btnEdit.addEventListener('click', () => {
     close();
-    const d = order?.data || {};
-    const draftData = {
-      ...d,
-      extraInfo: revisionComment
-        ? (state.lang === 'ru' ? 'Комментарий эксперта о доработке: ' : 'Expert revision comment: ') + revisionComment + (d.extraInfo ? '\n\n' + d.extraInfo : '')
-        : d.extraInfo || '',
-    };
-    delete draftData.revision_comment;
-    try {
-      const created = await saveDraftToApi(draftData);
-      if (created) state.profileDrafts = [{ ...created }, ...(state.profileDrafts || [])];
-      loadDraftIntoConstructor({ id: created?.id, data: draftData });
-    } catch (e) {
-      loadDraftIntoConstructor({ data: draftData });
-    }
-    render();
+    loadOrderIntoConstructor(order);
   });
 }
 
@@ -1132,6 +1220,8 @@ function render() {
   const hash = window.location.hash;
   if (hash === "#blog" || hash.startsWith("#blog/")) {
     renderBlog();
+  } else if (hash === "#admin") {
+    renderAdmin();
   } else if (hash === "#profile") {
     renderProfile();
   } else if (hash === "#legal" || hash === "#legal-offer" || hash === "#legal-privacy") {
@@ -1153,7 +1243,9 @@ function applyLanguageToShell() {
   const dict = I18N[state.lang];
   document.documentElement.lang = state.lang === "ru" ? "ru" : "en";
 
-  const navLinks = document.querySelectorAll(".nav-link");
+  const navLinks = document.querySelectorAll(".nav-link:not(.admin-nav-link)");
+  const adminLink = document.getElementById("admin-nav-link");
+  if (adminLink) adminLink.textContent = state.lang === "ru" ? "Админ" : "Admin";
   if (navLinks.length >= 5) {
     navLinks[0].textContent = dict.nav.home;
     navLinks[1].textContent = dict.nav.service;
@@ -1344,7 +1436,7 @@ function renderHome() {
             </form>
             <div class="btn-row">
               <button class="secondary-btn" id="btn-save-draft">${tForm.saveDraft}</button>
-              <button class="primary-btn" id="btn-create-order">${tForm.createOrder}</button>
+              <button class="primary-btn" id="btn-create-order">${state.editingOrderId ? (state.lang === 'ru' ? 'Обновить заказ' : 'Update order') : tForm.createOrder}</button>
             </div>
             <p class="small muted-text">
               ${tForm.hint}
@@ -1523,10 +1615,35 @@ function formatDraftPreview(d) {
   return [uk, period].filter(Boolean).join(' · ') || (state.lang === 'ru' ? 'Черновик' : 'Draft');
 }
 
+function loadOrderIntoConstructor(order) {
+  if (!order?.data) return;
+  const d = order.data;
+  state.editingOrderId = order.id;
+  state.editingDraftId = null;
+  state.constructorForm = {
+    fullName: d.fullName || '',
+    address: d.address || '',
+    passportSeries: d.passportSeries || '',
+    passportNumber: d.passportNumber || '',
+    passportIssued: d.passportIssued || '',
+    phone: d.phone || '',
+    ukName: d.ukName || '',
+    ukAddress: d.ukAddress || '',
+    period: d.period || '',
+    emailForReply: d.emailForReply || '',
+    extraInfo: d.extraInfo || '',
+    services: d.services || { content: true, heating: false, water: false, repair: false },
+  };
+  state.withExpert = !!d.withExpert;
+  window.location.hash = '#constructor';
+  render();
+}
+
 function loadDraftIntoConstructor(draft) {
   if (!draft?.data) return;
   const d = draft.data;
   state.editingDraftId = draft.id;
+  state.editingOrderId = null;
   state.constructorForm = {
     fullName: d.fullName || '',
     address: d.address || '',
@@ -1639,11 +1756,11 @@ async function renderProfile() {
 
   if (!hasCachedDrafts) {
     try {
-      const [drafts, orders] = await Promise.all([
+      let [drafts, orders] = await Promise.all([
         fetchDrafts(),
         fetchOrders().catch(() => []),
       ]);
-      state.profileDrafts = drafts;
+      state.profileDrafts = drafts || [];
       state.profileOrders = orders || [];
     } catch (e) {
       state.profileDrafts = [];
@@ -1669,7 +1786,7 @@ async function renderProfile() {
         <div class="neo-card order-card" style="margin-bottom:12px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px">
           <div style="flex:1;min-width:0">
             <div style="font-weight:600;margin-bottom:4px">${formatOrderPreview(o)}</div>
-            <div class="small muted-text">${getOrderStatusLabel(o.status)} · ${new Date(o.created_at).toLocaleDateString()}</div>
+            <div class="small muted-text">${getOrderStatusLabel(o.approved)} · ${new Date(o.created_at).toLocaleDateString()}</div>
           </div>
           <div style="display:flex;gap:8px;flex-shrink:0">
             <button class="secondary-btn order-open-btn" data-order-index="${i}">${t.orderOpen}</button>
@@ -1755,6 +1872,153 @@ async function deleteOrder(id) {
       }
     });
   });
+}
+
+// ========== ADMIN PAGE ==========
+
+async function renderAdmin() {
+  const t = I18N[state.lang].admin;
+  applyLanguageToShell();
+
+  if (!state.user) {
+    appRoot.innerHTML = `
+      <div class="landing">
+        <section id="admin" class="section hero-section section-visible">
+          <div class="neo-card section-shell">
+            <h2 class="section-title">${t.title}</h2>
+            <p class="section-subtitle">${state.lang === 'ru' ? 'Войдите, чтобы открыть админ-панель.' : 'Log in to open admin panel.'}</p>
+            <a href="#" class="primary-btn" onclick="goToDashboard(); return false;">${state.lang === 'ru' ? 'Профиль' : 'Profile'}</a>
+          </div>
+        </section>
+      </div>
+    `;
+    return;
+  }
+
+  let orders = state.adminOrders;
+  let loading = false;
+  try {
+    loading = true;
+    orders = await fetchAdminOrders();
+    state.adminOrders = orders;
+  } catch (e) {
+    state.isAdmin = false;
+    appRoot.innerHTML = `
+      <div class="landing">
+        <section id="admin" class="section hero-section section-visible">
+          <div class="neo-card section-shell">
+            <h2 class="section-title">${t.title}</h2>
+            <p class="section-subtitle muted-text">${state.lang === 'ru' ? 'Доступ запрещён или требуется авторизация.' : 'Access denied or authorization required.'}</p>
+            <a href="#" class="secondary-btn" onclick="window.location.hash=''; render(); return false;">&larr; ${state.lang === 'ru' ? 'На главную' : 'Back'}</a>
+          </div>
+        </section>
+      </div>
+    `;
+    return;
+  } finally {
+    loading = false;
+  }
+
+  state.isAdmin = true;
+
+  const statusLabel = (approved) => {
+    if (approved === true) return t.statusReady;
+    if (approved === false) return t.statusRevision;
+    return t.statusInWork;
+  };
+
+  const formatUser = (u) => {
+    if (!u) return '—';
+    const name = [u.first_name, u.last_name].filter(Boolean).join(' ');
+    const un = u.username ? '@' + u.username : '';
+    return [name || un || '—', un].filter(Boolean).join(' ');
+  };
+
+  appRoot.innerHTML = `
+    <div class="landing">
+      <section id="admin" class="section hero-section section-visible">
+        <div class="neo-card section-shell">
+          <h2 class="section-title">${t.title}</h2>
+          <p class="section-subtitle">${t.subtitle}</p>
+          <a href="#" class="secondary-btn" style="margin-bottom:20px;display:inline-block" onclick="window.location.hash=''; render(); return false;">&larr; ${state.lang === 'ru' ? 'На главную' : 'Back'}</a>
+          <div id="admin-orders-list"></div>
+        </div>
+      </section>
+    </div>
+  `;
+
+  const listEl = document.getElementById('admin-orders-list');
+  if (orders.length === 0) {
+    listEl.innerHTML = `<p class="small muted-text">${t.empty}</p>`;
+  } else {
+    listEl.innerHTML = orders
+      .map(
+        (o, i) => {
+          const preview = formatOrderPreview(o);
+          const approved = o.approved;
+          const canSetReady = approved !== true;
+          const canSetRevision = approved !== false;
+          const id = o.id;
+          return `
+        <div class="neo-card admin-order-card" style="margin-bottom:16px;padding:16px" data-order-id="${id}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;margin-bottom:4px">${escapeHtml(preview)}</div>
+              <div class="small muted-text">${t.user}: ${escapeHtml(formatUser(o.user))} · ${t.date}: ${new Date(o.created_at).toLocaleDateString()}</div>
+              <div style="margin-top:8px"><span class="tag" style="background:var(--bg-soft);padding:4px 8px;border-radius:6px">${statusLabel(approved)}</span></div>
+              ${approved === false && o.revision_comment ? `<div class="small muted-text" style="margin-top:8px">${state.lang === 'ru' ? 'Комментарий:' : 'Comment:'} ${escapeHtml(o.revision_comment)}</div>` : ''}
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0">
+              ${canSetReady ? `<button class="secondary-btn admin-set-ready" data-order-id="${id}">${t.setReady}</button>` : ''}
+              ${canSetRevision ? `
+                <div class="admin-revision-row" style="display:flex;gap:8px;align-items:center">
+                  <input type="text" class="input admin-comment-input" data-order-id="${id}" placeholder="${t.commentPlaceholder}" style="min-width:160px" value="${escapeHtml(o.revision_comment || '')}" />
+                  <button class="secondary-btn admin-set-revision" data-order-id="${id}" data-comment-input="admin-comment-${i}">${t.setRevision}</button>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+        }
+      )
+      .join('');
+
+    listEl.querySelectorAll('.admin-set-ready').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-order-id');
+        try {
+          await patchAdminOrderStatus(id, true, '');
+          const idx = state.adminOrders.findIndex((o) => o.id === id);
+          if (idx >= 0) state.adminOrders[idx] = { ...state.adminOrders[idx], approved: true, revision_comment: '' };
+          renderAdmin();
+        } catch (e) {
+          alert(state.lang === 'ru' ? 'Ошибка: ' + e.message : 'Error: ' + e.message);
+        }
+      });
+    });
+
+    listEl.querySelectorAll('.admin-set-revision').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-order-id');
+        const card = listEl.querySelector(`[data-order-id="${id}"]`);
+        const input = card?.querySelector('.admin-comment-input');
+        const comment = (input?.value || '').trim();
+        if (!comment) {
+          alert(state.lang === 'ru' ? 'Введите комментарий для доработки.' : 'Enter revision comment.');
+          return;
+        }
+        try {
+          await patchAdminOrderStatus(id, false, comment);
+          const idx = state.adminOrders.findIndex((o) => o.id === id);
+          if (idx >= 0) state.adminOrders[idx] = { ...state.adminOrders[idx], approved: false, revision_comment: comment };
+          renderAdmin();
+        } catch (e) {
+          alert(state.lang === 'ru' ? 'Ошибка: ' + e.message : 'Error: ' + e.message);
+        }
+      });
+    });
+  }
 }
 
 // ========== LEGAL PAGES (оферта, политика) ==========
@@ -1894,6 +2158,14 @@ function renderBlog() {
 }
 
 // ========== PROFILE UI ==========
+
+function updateAdminNav() {
+  const link = document.getElementById('admin-nav-link');
+  if (link) {
+    link.style.display = state.isAdmin ? '' : 'none';
+    link.textContent = state.lang === 'ru' ? 'Админ' : 'Admin';
+  }
+}
 
 function updateProfileUI() {
   const avatarEl = document.getElementById('profile-avatar');

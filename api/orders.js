@@ -65,11 +65,11 @@ async function resolveUserId(req) {
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'GET' && req.method !== 'POST' && req.method !== 'DELETE') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'GET' && req.method !== 'POST' && req.method !== 'PUT' && req.method !== 'DELETE') return res.status(405).json({ error: 'Method not allowed' });
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return res.status(500).json({ error: 'Server config error' });
 
   try {
@@ -85,7 +85,7 @@ module.exports = async function handler(req, res) {
     if (req.method === 'GET') {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, data, status, revision_comment, created_at')
+        .select('id, data, approved, revision_comment, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
       if (error) return res.status(500).json({ error: error.message });
@@ -96,10 +96,28 @@ module.exports = async function handler(req, res) {
       const { data: orderData } = body;
       if (!orderData || typeof orderData !== 'object') return res.status(400).json({ error: 'Некорректные данные заказа' });
       const withExpert = !!orderData.withExpert;
-      const row = { user_id: userId, data: orderData, status: withExpert ? 'in_review' : 'no_review', revision_comment: '' };
+      // Без проверки — сразу approved=true (можно скачать). С проверкой — approved=null (в работе).
+      const approved = withExpert ? null : true;
+      const row = { user_id: userId, data: orderData, approved, revision_comment: '' };
       const { data: inserted, error } = await supabase.from('orders').insert(row).select().single();
       if (error) return res.status(500).json({ error: error.message });
       return res.status(200).json({ order: inserted });
+    }
+
+    if (req.method === 'PUT') {
+      const { id, data: orderData } = body;
+      if (!id || !orderData || typeof orderData !== 'object') return res.status(400).json({ error: 'Некорректные данные' });
+      // Обновление заказа (при доработке): данные и сброс approved на null
+      const { data: updated, error } = await supabase
+        .from('orders')
+        .update({ data: orderData, approved: null, revision_comment: '' })
+        .eq('id', id)
+        .eq('user_id', userId)
+        .select()
+        .single();
+      if (error) return res.status(500).json({ error: error.message });
+      if (!updated) return res.status(404).json({ error: 'Заказ не найден' });
+      return res.status(200).json({ order: updated });
     }
 
     if (req.method === 'DELETE') {
