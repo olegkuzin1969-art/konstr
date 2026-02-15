@@ -493,16 +493,16 @@ const I18N = {
         "В демо‑версии контактные данные условные. В продакшене здесь появятся актуальные реквизиты и ссылки на соцсети.",
       supportEmail: "Email поддержки",
       telegram: "Telegram",
-      formTitle: "Форма обратной связи (демо)",
+      formTitle: "Форма обратной связи",
       nameLabel: "Имя",
       namePlaceholder: "Как к вам обращаться",
       emailLabel: "Email",
       emailPlaceholder: "you@example.com",
       messageLabel: "Сообщение",
       messagePlaceholder: "Кратко опишите вопрос или запрос",
-      sendButton: "Отправить (демо)",
-      sendAlert:
-        "Сообщение не отправляется на сервер — это демо‑лендинг. В продакшене здесь будет интеграция с почтой или CRM.",
+      sendButton: "Отправить",
+      sendSuccess: "Сообщение отправлено. Спасибо за обратную связь!",
+      sendError: "Ошибка отправки. Попробуйте позже.",
     },
     legal: {
       offerTitle: "Публичная оферта",
@@ -782,9 +782,9 @@ const I18N = {
       emailPlaceholder: "you@example.com",
       messageLabel: "Message",
       messagePlaceholder: "Briefly describe your question or request",
-      sendButton: "Send (demo)",
-      sendAlert:
-        "This message is not actually sent — this is a demo landing. In production it will be wired to email or a CRM.",
+      sendButton: "Send",
+      sendSuccess: "Message sent. Thank you!",
+      sendError: "Send failed. Please try again later.",
     },
     legal: {
       offerTitle: "Public offer",
@@ -1617,10 +1617,35 @@ function renderHome() {
   // Форма контактов
   const contactForm = document.getElementById("contact-form");
   if (contactForm) {
-    contactForm.addEventListener("submit", (e) => {
+    contactForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      alert(I18N[state.lang].contacts.sendAlert);
-      contactForm.reset();
+      const name = contactForm.name?.value?.trim();
+      const email = contactForm.email?.value?.trim();
+      const message = contactForm.message?.value?.trim();
+      if (!name || !message) {
+        alert(state.lang === 'ru' ? 'Укажите имя и сообщение' : 'Enter name and message');
+        return;
+      }
+      const btn = contactForm.querySelector('button[type="submit"]');
+      if (btn) btn.disabled = true;
+      try {
+        const r = await fetch(API_BASE + '/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, message }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (r.ok) {
+          alert(I18N[state.lang].contacts.sendSuccess);
+          contactForm.reset();
+        } else {
+          alert(data.error || I18N[state.lang].contacts.sendError);
+        }
+      } catch (err) {
+        alert(I18N[state.lang].contacts.sendError);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
     });
   }
 
