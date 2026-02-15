@@ -848,7 +848,7 @@ function getLetterPreviewFromData(f) {
     .map(([k]) => {
       switch (k) {
         case "content":
-          return "коммунальные услуги и содержание жилья";
+          return "содержание и ремонт жилья";
         case "heating":
           return "отопление";
         case "water":
@@ -860,36 +860,34 @@ function getLetterPreviewFromData(f) {
       }
     })
     .filter(Boolean)
-    .join(", ");
+    .map((s) => "– " + s)
+    .join("\n");
 
-  return `
-${lang === "ru" ? "Управляющая компания:" : "Management company:"} ${f.ukName || "___________"}
-${lang === "ru" ? "Адрес УК:" : "MC address:"} ${f.ukAddress || "___________"}
+  const header = lang === "ru"
+    ? `Руководителю\n${f.ukName || "___________"}\n${f.ukAddress || "___________"}\n\nОт ${f.fullName || "___________"}\nПроживающего по адресу\n${f.address || "___________"}\n${f.emailForReply ? "Тел./Email: " + f.emailForReply : ""}`
+    : `To the head of\n${f.ukName || "___________"}\n${f.ukAddress || "___________"}\n\nFrom ${f.fullName || "___________"}\nResiding at\n${f.address || "___________"}\n${f.emailForReply ? "Tel/Email: " + f.emailForReply : ""}`;
 
-${lang === "ru" ? "От:" : "From:"} ${f.fullName || (lang === "ru" ? "ФИО: ___________" : "Full name: ___________")}
-${lang === "ru" ? "Адрес:" : "Address:"} ${f.address || (lang === "ru" ? "Адрес: ___________" : "Address: ___________")}
-${f.emailForReply ? (lang === "ru" ? "Email для ответа: " : "Email for reply: ") + f.emailForReply : ""}
+  const bodyIntro = lang === "ru"
+    ? "В соответствии с Федеральным законом № 402‑ФЗ «О бухгалтерском учёте» требую предоставить и направить мне по указанному выше адресу правоустанавливающие документы и сведения, подтверждающие начисления и расходы по следующим услугам:"
+    : "In accordance with Federal Law No. 402‑FZ \"On Accounting\" I demand to be provided with and sent to the address specified above the legal documents and information confirming charges and expenses for the following services:";
 
-${lang === "ru" ? "Запрос в порядке ст. 402-ФЗ" : "Request under Federal Law 402‑FZ"}
+  const bodyList = chosenServices || (lang === "ru" ? "– перечень услуг" : "– list of services");
 
-${lang === "ru" ? "Уважаемые представители управляющей компании!" : "Dear representatives of the management company,"}
+  const bodyPeriod = lang === "ru"
+    ? `Требую предоставить расшифровку начислений за период: ${f.period || "___________"}.`
+    : `I demand a breakdown of charges for the period: ${f.period || "___________"}.`;
 
-${lang === "ru"
-    ? "В соответствии с Федеральным законом № 402‑ФЗ «О бухгалтерском учёте» и действующим жилищным законодательством прошу предоставить документы и сведения, подтверждающие начисления и расходы по следующим услугам:"
-    : "In accordance with Federal Law No. 402‑FZ \"On Accounting\" and the housing legislation in force, I request documents and information confirming charges and expenses for the following services:"}
-${chosenServices || (lang === "ru" ? "перечень услуг будет указан здесь" : "the list of services will be specified here")}.
+  const bodyLegal = lang === "ru"
+    ? "Требую предоставить информацию о законных основаниях взимания денежных средств и ведения деятельности по указанному адресу."
+    : "I demand information on the legal grounds for collecting funds and conducting activities at the specified address.";
 
-${lang === "ru"
-    ? "Прошу предоставить расшифровку начислений за период:"
-    : "Please provide a breakdown of charges for the period:"}
-${f.period || (lang === "ru" ? "указать период" : "specify the period")}.
-
-${lang === "ru"
+  const bodySend = lang === "ru"
     ? "Информацию прошу направить в письменном виде по адресу проживания и (или) на электронную почту, указанную в обращении."
-    : "Please send the information in writing to my residential address and/or to the email address indicated in this request."}
+    : "Please send the information in writing to my residential address and/or to the email address indicated in this request.";
 
-${lang === "ru" ? "Дата, подпись." : "Date, signature."}
-`.trim();
+  const footer = lang === "ru" ? "Дата ________\nПодпись ________" : "Date ________\nSignature ________";
+
+  return `${header}\n\n${lang === "ru" ? "ЗАЯВЛЕНИЕ" : "APPLICATION"}\n\n${bodyIntro}\n\n${bodyList}\n\n${bodyPeriod}\n\n${bodyLegal}\n\n${bodySend}\n\n${footer}`.trim();
 }
 
 function getLetterPreview() {
@@ -897,8 +895,8 @@ function getLetterPreview() {
 }
 
 function downloadOrderPdf(order) {
-  const text = getLetterPreviewFromData(order?.data);
-  if (!text) return;
+  const f = order?.data || state.constructorForm;
+  if (!f) return;
   try {
     const { jsPDF } = window.jspdf || {};
     if (!jsPDF) {
@@ -906,11 +904,93 @@ function downloadOrderPdf(order) {
       return;
     }
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const pageW = 210;
+    const pageH = 297;
+    const margin = 20;
+    const contentW = pageW - margin * 2;
+    let y = 20;
+
     doc.setFontSize(10);
-    const lines = doc.splitTextToSize(text, 180);
-    doc.text(lines, 15, 20);
-    const name = (order?.data?.ukName || 'Zapros').replace(/[^a-zA-Zа-яА-Я0-9]/g, '_').slice(0, 30);
-    doc.save(`Zapros_UK_${name}_${new Date().toISOString().slice(0, 10)}.pdf`);
+
+    // Шапка справа сверху
+    const headerLines = [
+      state.lang === 'ru' ? 'Руководителю' : 'To the head of',
+      f.ukName || '___________',
+      f.ukAddress || '___________',
+      '',
+      (state.lang === 'ru' ? 'От ' : 'From ') + (f.fullName || '___________'),
+      state.lang === 'ru' ? 'Проживающего по адресу' : 'Residing at',
+      f.address || '___________',
+      ...(f.emailForReply ? [(state.lang === 'ru' ? 'Тел./Email: ' : 'Tel/Email: ') + f.emailForReply] : []),
+    ];
+    const headerText = headerLines.join('\n');
+    const headerSplit = doc.splitTextToSize(headerText, 70);
+    doc.text(headerSplit, pageW - margin, y, { align: 'right' });
+    y += headerSplit.length * 5 + 10;
+
+    // ЗАЯВЛЕНИЕ по центру
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(state.lang === 'ru' ? 'ЗАЯВЛЕНИЕ' : 'APPLICATION', pageW / 2, y, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    y += 12;
+
+    // Основной текст слева
+    const chosenServices = Object.entries(f.services || {})
+      .filter(([, v]) => v)
+      .map(([k]) => {
+        switch (k) {
+          case 'content': return state.lang === 'ru' ? 'содержание и ремонт жилья' : 'housing maintenance';
+          case 'heating': return state.lang === 'ru' ? 'отопление' : 'heating';
+          case 'water': return state.lang === 'ru' ? 'водоснабжение' : 'water supply';
+          case 'repair': return state.lang === 'ru' ? 'ремонт общедомового имущества' : 'common property repair';
+          default: return '';
+        }
+      })
+      .filter(Boolean)
+      .map((s) => '– ' + s)
+      .join('\n');
+
+    const intro = state.lang === 'ru'
+      ? 'В соответствии с Федеральным законом № 402‑ФЗ «О бухгалтерском учёте» требую предоставить и направить мне по указанному выше адресу правоустанавливающие документы и сведения, подтверждающие начисления и расходы по следующим услугам:'
+      : 'In accordance with Federal Law No. 402‑FZ "On Accounting" I demand to be provided with and sent to the address specified above the legal documents and information confirming charges and expenses for the following services:';
+    const introLines = doc.splitTextToSize(intro, contentW);
+    doc.text(introLines, margin, y);
+    y += introLines.length * 5 + 4;
+
+    const listText = chosenServices || (state.lang === 'ru' ? 'перечень услуг' : 'list of services');
+    const listLines = doc.splitTextToSize(listText, contentW);
+    doc.text(listLines, margin, y);
+    y += listLines.length * 5 + 6;
+
+    const periodText = (state.lang === 'ru'
+      ? 'Требую предоставить расшифровку начислений за период: '
+      : 'I demand a breakdown of charges for the period: ') + (f.period || '___________') + '.';
+    const periodLines = doc.splitTextToSize(periodText, contentW);
+    doc.text(periodLines, margin, y);
+    y += periodLines.length * 5 + 4;
+
+    const legalText = state.lang === 'ru'
+      ? 'Требую предоставить информацию о законных основаниях взимания денежных средств и ведения деятельности по указанному адресу.'
+      : 'I demand information on the legal grounds for collecting funds and conducting activities at the specified address.';
+    const legalLines = doc.splitTextToSize(legalText, contentW);
+    doc.text(legalLines, margin, y);
+    y += legalLines.length * 5 + 4;
+
+    const sendText = state.lang === 'ru'
+      ? 'Информацию прошу направить в письменном виде по адресу проживания и (или) на электронную почту, указанную в обращении.'
+      : 'Please send the information in writing to my residential address and/or to the email address indicated in this request.';
+    const sendLines = doc.splitTextToSize(sendText, contentW);
+    doc.text(sendLines, margin, y);
+    y += sendLines.length * 5 + 12;
+
+    // Подвал: Дата слева, Подпись справа
+    doc.text(state.lang === 'ru' ? 'Дата ________' : 'Date ________', margin, y);
+    doc.text(state.lang === 'ru' ? 'Подпись ________' : 'Signature ________', pageW - margin, y, { align: 'right' });
+
+    const name = (f.ukName || 'Zapros').replace(/[^a-zA-Zа-яА-Я0-9]/g, '_').slice(0, 30);
+    doc.save(`Zayavlenie_UK_${name}_${new Date().toISOString().slice(0, 10)}.pdf`);
   } catch (e) {
     alert(state.lang === 'ru' ? 'Ошибка создания PDF' : 'PDF creation error');
   }
