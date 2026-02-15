@@ -1102,6 +1102,53 @@ html {
   margin-top: 16px;
 }
 
+/* Modal */
+.modal-overlay .modal-content {
+  background: var(--bg);
+  border-radius: 18px;
+  padding: 24px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 10px 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal-overlay .modal-title {
+  margin: 0 0 16px;
+  font-size: 18px;
+}
+
+.modal-overlay .modal-preview {
+  flex: 1;
+  overflow: auto;
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.modal-overlay .modal-preview pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+
+.modal-overlay .modal-actions {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.modal-overlay .modal-actions .primary-btn,
+.modal-overlay .modal-actions .secondary-btn {
+  flex: 1;
+}
+
 .price-list {
   margin: 6px 0 8px;
   padding-left: 18px;

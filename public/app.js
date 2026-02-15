@@ -174,6 +174,42 @@ async function deleteDraftFromApi(id) {
   await draftsApi('DELETE', { id });
 }
 
+// ========== ORDERS (API + БД) ==========
+
+async function ordersApi(method, body = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  let url = API_BASE + '/api/orders';
+  let payload = { ...body };
+  if (isInTelegramWebApp() && window.Telegram?.WebApp?.initData) {
+    payload.initData = window.Telegram.WebApp.initData;
+  } else if (state.token) {
+    headers['Authorization'] = 'Bearer ' + state.token;
+  } else {
+    throw new Error('Необходима авторизация');
+  }
+  if (method === 'GET' && payload.initData) {
+    url += '?initData=' + encodeURIComponent(payload.initData);
+  }
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: method !== 'GET' ? JSON.stringify(payload) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Ошибка запроса');
+  return data;
+}
+
+async function fetchOrders() {
+  const data = await ordersApi('GET');
+  return data.orders || [];
+}
+
+async function createOrderApi(orderData) {
+  const data = await ordersApi('POST', { data: orderData });
+  return data.order;
+}
+
 // ========== ORDERS (демо) ==========
 
 async function fetchOrders() {
@@ -321,7 +357,7 @@ const I18N = {
       emailPlaceholder: "Если хотите получить ответ по email",
       withExpert: "Хочу проверку эксперта (+1 500 ₽)",
       saveDraft: "Сохранить черновик",
-      createOrder: "Создать заказ (демо)",
+      createOrder: "Создать заказ",
       hint:
         "В полноценной версии после заполнения формы откроется выбор тарифа и виджет оплаты. Здесь мы показываем только UX конструктора.",
       previewTitle: "Черновик письма",
@@ -469,6 +505,11 @@ const I18N = {
       subtitle: "Сохранённые запросы в УК. Нажмите, чтобы продолжить редактирование.",
       empty: "Нет сохранённых черновиков.",
       ordersEmpty: "Нет заказов.",
+      orderStatusNoReview: "Без проверки",
+      orderOpen: "Открыть",
+      orderPreview: "Предпросмотр",
+      download: "Скачать",
+      close: "Закрыть",
       loginHint: "Войдите, чтобы сохранять черновики и видеть заказы.",
       loadDraft: "Открыть",
       deleteDraft: "Удалить",
@@ -568,7 +609,7 @@ const I18N = {
       emailPlaceholder: "If you want to receive a reply by email",
       withExpert: "I want expert review (+1 500 ₽)",
       saveDraft: "Save draft",
-      createOrder: "Create order (demo)",
+      createOrder: "Create order",
       hint:
         "In the full version you will proceed to plan selection and a payment widget. Here we only showcase the UX.",
       previewTitle: "Letter draft",
@@ -672,6 +713,11 @@ const I18N = {
       subtitle: "Saved requests to MC. Click to continue editing.",
       empty: "No saved drafts.",
       ordersEmpty: "No orders.",
+      orderStatusNoReview: "Without review",
+      orderOpen: "Open",
+      orderPreview: "Preview",
+      download: "Download",
+      close: "Close",
       loginHint: "Log in to save drafts and view orders.",
       loadDraft: "Open",
       deleteDraft: "Delete",
@@ -753,37 +799,35 @@ async function saveDraft() {
   }
 }
 
-function createOrder() {
+async function createOrder() {
   if (!state.user) {
     alert(I18N[state.lang].alerts.mustLogin);
     return;
   }
-  const id = "order-" + (state.documents.length + 1);
-  const order = {
-    id,
-    visitorEmail: state.user.email,
-    data: { ...state.constructorForm },
-    withExpert: state.withExpert,
-    status: state.withExpert ? "waiting_expert" : "paid_no_expert",
-    comment: "",
-    files: {
-      draft: state.withExpert ? null : "Запрос_Черновик.pdf",
-      final: null,
-      expertComment: null,
-    },
-  };
-  state.documents.push(order);
-  state.checkoutOrderId = id;
-  alert(I18N[state.lang].alerts.orderCreated(id));
-  render();
+  if (state.withExpert) {
+    alert(state.lang === 'ru' ? 'Оформление заказа с проверкой временно недоступно' : 'Orders with expert review are temporarily unavailable');
+    return;
+  }
+  const orderData = { ...state.constructorForm, withExpert: state.withExpert };
+  try {
+    const created = await createOrderApi(orderData);
+    clearConstructorForm();
+    state.profileOrders = [{ ...created }, ...(state.profileOrders || [])];
+    alert(state.lang === 'ru' ? 'Заказ оформлен' : 'Order created');
+    window.location.hash = '#profile';
+    render();
+  } catch (e) {
+    alert(state.lang === 'ru' ? 'Ошибка: ' + (e.message || 'Проверьте подключение') : 'Error: ' + (e.message || 'Check connection'));
+  }
 }
 
 function addComment(postId, text) {
   addCommentLocal(postId, text);
 }
 
-function getLetterPreview() {
-  const f = state.constructorForm;
+function getLetterPreviewFromData(f) {
+  if (!f) f = state.constructorForm;
+  const lang = state.lang;
   const chosenServices = Object.entries(f.services)
     .filter(([, v]) => v)
     .map(([k]) => {
@@ -804,33 +848,92 @@ function getLetterPreview() {
     .join(", ");
 
   return `
-${state.lang === "ru" ? "Управляющая компания:" : "Management company:"} ${f.ukName || "___________"}
-${state.lang === "ru" ? "Адрес УК:" : "MC address:"} ${f.ukAddress || "___________"}
+${lang === "ru" ? "Управляющая компания:" : "Management company:"} ${f.ukName || "___________"}
+${lang === "ru" ? "Адрес УК:" : "MC address:"} ${f.ukAddress || "___________"}
 
-${state.lang === "ru" ? "От:" : "From:"} ${f.fullName || (state.lang === "ru" ? "ФИО: ___________" : "Full name: ___________")}
-${state.lang === "ru" ? "Адрес:" : "Address:"} ${f.address || (state.lang === "ru" ? "Адрес: ___________" : "Address: ___________")}
-${f.emailForReply ? (state.lang === "ru" ? "Email для ответа: " : "Email for reply: ") + f.emailForReply : ""}
+${lang === "ru" ? "От:" : "From:"} ${f.fullName || (lang === "ru" ? "ФИО: ___________" : "Full name: ___________")}
+${lang === "ru" ? "Адрес:" : "Address:"} ${f.address || (lang === "ru" ? "Адрес: ___________" : "Address: ___________")}
+${f.emailForReply ? (lang === "ru" ? "Email для ответа: " : "Email for reply: ") + f.emailForReply : ""}
 
-${state.lang === "ru" ? "Запрос в порядке ст. 402-ФЗ" : "Request under Federal Law 402‑FZ"}
+${lang === "ru" ? "Запрос в порядке ст. 402-ФЗ" : "Request under Federal Law 402‑FZ"}
 
-${state.lang === "ru" ? "Уважаемые представители управляющей компании!" : "Dear representatives of the management company,"}
+${lang === "ru" ? "Уважаемые представители управляющей компании!" : "Dear representatives of the management company,"}
 
-${state.lang === "ru"
+${lang === "ru"
     ? "В соответствии с Федеральным законом № 402‑ФЗ «О бухгалтерском учёте» и действующим жилищным законодательством прошу предоставить документы и сведения, подтверждающие начисления и расходы по следующим услугам:"
     : "In accordance with Federal Law No. 402‑FZ \"On Accounting\" and the housing legislation in force, I request documents and information confirming charges and expenses for the following services:"}
-${chosenServices || (state.lang === "ru" ? "перечень услуг будет указан здесь" : "the list of services will be specified here")}.
+${chosenServices || (lang === "ru" ? "перечень услуг будет указан здесь" : "the list of services will be specified here")}.
 
-${state.lang === "ru"
+${lang === "ru"
     ? "Прошу предоставить расшифровку начислений за период:"
     : "Please provide a breakdown of charges for the period:"}
-${f.period || (state.lang === "ru" ? "указать период" : "specify the period")}.
+${f.period || (lang === "ru" ? "указать период" : "specify the period")}.
 
-${state.lang === "ru"
+${lang === "ru"
     ? "Информацию прошу направить в письменном виде по адресу проживания и (или) на электронную почту, указанную в обращении."
     : "Please send the information in writing to my residential address and/or to the email address indicated in this request."}
 
-${state.lang === "ru" ? "Дата, подпись." : "Date, signature."}
+${lang === "ru" ? "Дата, подпись." : "Date, signature."}
 `.trim();
+}
+
+function getLetterPreview() {
+  return getLetterPreviewFromData(state.constructorForm);
+}
+
+function downloadOrderPdf(order) {
+  const text = getLetterPreviewFromData(order?.data);
+  if (!text) return;
+  try {
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) {
+      alert(state.lang === 'ru' ? 'Библиотека PDF не загружена' : 'PDF library not loaded');
+      return;
+    }
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    doc.setFontSize(10);
+    const lines = doc.splitTextToSize(text, 180);
+    doc.text(lines, 15, 20);
+    const name = (order?.data?.ukName || 'Zapros').replace(/[^a-zA-Zа-яА-Я0-9]/g, '_').slice(0, 30);
+    doc.save(`Zapros_UK_${name}_${new Date().toISOString().slice(0, 10)}.pdf`);
+  } catch (e) {
+    alert(state.lang === 'ru' ? 'Ошибка создания PDF' : 'PDF creation error');
+  }
+}
+
+function openOrderModal(order) {
+  const t = I18N[state.lang].profile;
+  const preview = getLetterPreviewFromData(order?.data);
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-content">
+      <h3 class="modal-title">${t.orderPreview}</h3>
+      <div class="modal-preview"><pre>${(preview || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre></div>
+      <div class="modal-actions">
+        <button class="primary-btn" id="modal-download">${t.download || 'Скачать'}</button>
+        <button class="secondary-btn" id="modal-close">${t.close || 'Закрыть'}</button>
+      </div>
+    </div>
+  `;
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px';
+  document.body.appendChild(overlay);
+
+  const close = () => {
+    overlay.remove();
+  };
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  overlay.querySelector('#modal-close').addEventListener('click', close);
+  overlay.querySelector('#modal-download').addEventListener('click', () => {
+    downloadOrderPdf(order);
+  });
+}
+
+function formatOrderPreview(order) {
+  if (!order?.data) return '';
+  const uk = order.data.ukName || (state.lang === 'ru' ? 'УК не указана' : 'MC not specified');
+  const period = order.data.period || '';
+  return [uk, period].filter(Boolean).join(' · ') || (state.lang === 'ru' ? 'Заказ' : 'Order');
 }
 
 function render() {
@@ -1135,18 +1238,7 @@ function renderHome() {
 
   const btnCreateOrder = document.getElementById("btn-create-order");
   if (btnCreateOrder) {
-    btnCreateOrder.addEventListener("click", () => {
-      const email =
-        state.user?.email ||
-        prompt(I18N[state.lang].alerts.enterEmail)?.trim();
-      if (!email) return;
-      if (!state.user) {
-        setUser({ email });
-      } else if (!state.user.email && email) {
-        setUser({ ...state.user, email });
-      }
-      createOrder();
-    });
+    btnCreateOrder.addEventListener("click", () => createOrder());
   }
 
   // Тарифные кнопки
@@ -1329,13 +1421,52 @@ async function renderProfile() {
 
   if (!hasCachedDrafts) {
     try {
-      const drafts = await fetchDrafts();
+      const [drafts, orders] = await Promise.all([
+        fetchDrafts(),
+        fetchOrders().catch(() => []),
+      ]);
       state.profileDrafts = drafts;
+      state.profileOrders = orders || [];
     } catch (e) {
       state.profileDrafts = [];
+      state.profileOrders = state.profileOrders || [];
+    }
+  } else if (!Array.isArray(state.profileOrders)) {
+    try {
+      state.profileOrders = await fetchOrders();
+    } catch {
+      state.profileOrders = [];
     }
   }
   state.isLoading = false;
+
+  const ordersEl = document.getElementById('profile-orders-list');
+  if (ordersEl) {
+    if (state.profileOrders.length === 0) {
+      ordersEl.innerHTML = `<p class="small muted-text">${t.ordersEmpty}</p>`;
+    } else {
+      ordersEl.innerHTML = state.profileOrders
+        .map(
+          (o, i) => `
+        <div class="neo-card order-card" style="margin-bottom:12px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;margin-bottom:4px">${formatOrderPreview(o)}</div>
+            <div class="small muted-text">${t.orderStatusNoReview} · ${new Date(o.created_at).toLocaleDateString()}</div>
+          </div>
+          <button class="secondary-btn order-open-btn" data-order-index="${i}">${t.orderOpen}</button>
+        </div>
+      `
+        )
+        .join('');
+      ordersEl.querySelectorAll('.order-open-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.getAttribute('data-order-index'), 10);
+          const o = state.profileOrders[idx];
+          if (o) openOrderModal(o);
+        });
+      });
+    }
+  }
 
   const listEl = document.getElementById('profile-drafts-list');
   if (listEl) {
@@ -1591,12 +1722,13 @@ function updateProfileUI() {
   }
 }
 
-function prefetchProfileDrafts() {
+function prefetchProfileData() {
   if (state.user && !state.profileDraftsLoading) {
     state.profileDraftsLoading = true;
-    fetchDrafts()
-      .then((drafts) => {
+    Promise.all([fetchDrafts(), fetchOrders().catch(() => [])])
+      .then(([drafts, orders]) => {
         state.profileDrafts = drafts;
+        state.profileOrders = orders || [];
         state.profileDraftsLoading = false;
       })
       .catch(() => { state.profileDraftsLoading = false; });
@@ -1608,7 +1740,7 @@ function toggleProfileDropdown() {
   if (dropdown) {
     const willOpen = !dropdown.classList.contains('open');
     dropdown.classList.toggle('open');
-    if (willOpen) prefetchProfileDrafts();
+    if (willOpen) prefetchProfileData();
   }
 }
 
@@ -1621,7 +1753,7 @@ function closeProfileDropdown() {
 
 function goToDashboard() {
   closeProfileDropdown();
-  prefetchProfileDrafts();
+  prefetchProfileData();
   window.location.hash = '#profile';
   render();
 }
