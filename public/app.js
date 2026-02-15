@@ -312,44 +312,23 @@ async function deleteOrderFromApi(id) {
   if (!res.ok) throw new Error(data.error || 'Ошибка запроса');
 }
 
-// ========== BLOG (API + БД) ==========
+// ========== BLOG (API) ==========
 
-async function blogApi(method, body = {}, query = '') {
-  const headers = { 'Content-Type': 'application/json' };
-  let url = API_BASE + '/api/blog' + (query ? '?' + query : '');
-  const payload = { ...body };
-  if (isInTelegramWebApp() && window.Telegram?.WebApp?.initData) {
-    payload.initData = window.Telegram.WebApp.initData;
-  } else if (state.token) {
-    headers['Authorization'] = 'Bearer ' + state.token;
-  }
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: method !== 'GET' ? JSON.stringify(payload) : undefined,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Ошибка запроса');
-  return data;
-}
+const API_BASE_BLOG = '';
 
 async function fetchBlogPosts() {
-  const data = await blogApi('GET');
+  const res = await fetch(API_BASE_BLOG + '/api/blog');
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Ошибка');
   state.blogPosts = data.posts || [];
   return state.blogPosts;
 }
 
-async function fetchBlogComments(postId) {
-  const data = await blogApi('GET', {}, 'postId=' + encodeURIComponent(postId));
-  return data.comments || [];
-}
-
-async function createBlogPost(postData) {
-  const payload = { ...postData };
-  if (isInTelegramWebApp() && window.Telegram?.WebApp?.initData) payload.initData = window.Telegram.WebApp.initData;
+async function createBlogPost(payload) {
   const headers = { 'Content-Type': 'application/json' };
   if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
-  const res = await fetch(API_BASE + '/api/blog', {
+  if (isInTelegramWebApp() && window.Telegram?.WebApp?.initData) payload.initData = window.Telegram.WebApp.initData;
+  const res = await fetch(API_BASE_BLOG + '/api/blog', {
     method: 'POST',
     headers,
     body: JSON.stringify(payload),
@@ -357,21 +336,6 @@ async function createBlogPost(postData) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Ошибка');
   return data.post;
-}
-
-async function addBlogComment(postId, text) {
-  const payload = { postId, text: String(text || '').trim() };
-  if (isInTelegramWebApp() && window.Telegram?.WebApp?.initData) payload.initData = window.Telegram.WebApp.initData;
-  const headers = { 'Content-Type': 'application/json' };
-  if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
-  const res = await fetch(API_BASE + '/api/blog', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Ошибка');
-  return data.comment;
 }
 
 async function uploadBlogMedia(file) {
@@ -384,17 +348,11 @@ async function uploadBlogMedia(file) {
       const headers = { 'Content-Type': 'application/json' };
       if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
       try {
-        const res = await fetch(API_BASE + '/api/blog-upload', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(payload),
-        });
+        const res = await fetch(API_BASE_BLOG + '/api/blog-upload', { method: 'POST', headers, body: JSON.stringify(payload) });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'Ошибка загрузки');
         resolve({ type: data.type || 'photo', url: data.url });
-      } catch (e) {
-        reject(e);
-      }
+      } catch (e) { reject(e); }
     };
     reader.readAsDataURL(file);
   });
@@ -502,9 +460,7 @@ const I18N = {
     },
     blog: {
       title: "Блог о защите прав и ЖКХ",
-      subtitle:
-        "Статьи и кейсы. Администратор создаёт посты, пользователи комментируют.",
-      badge: "Статья",
+      subtitle: "Статьи и кейсы.",
       createPost: "Создать пост",
       titleRu: "Заголовок (RU)",
       titleEn: "Заголовок (EN)",
@@ -515,19 +471,8 @@ const I18N = {
       orPasteUrl: "или вставьте URL",
       publish: "Опубликовать",
       postCreated: "Пост опубликован",
-      articleTitle: "Как использовать 402‑ФЗ против управляющей компании",
-      articleBody:
-        "Идея простая: вы не сразу пишете жалобу, а сначала требуете у УК документы по закону о бухгалтерском учёте. Без документов сложно спорить про «завышенные начисления» — поэтому «Конструкт» фокусируется на правильном запросе.",
-      steps: [
-        "Понимаете, какие документы можно запросить.",
-        "Формируете аккуратный запрос по 402‑ФЗ и ЖК РФ.",
-        "Используете ответ УК как доказательство в жалобах и исках.",
-      ],
-      commentsTitle: "Комментарии",
-      commentsEmpty: "Пока нет комментариев. Будьте первым.",
-      commentsLabel: "Оставить комментарий",
-      commentsPlaceholder: "Поделитесь опытом или задайте вопрос...",
-      commentsButton: "Отправить",
+      backLink: "На главную",
+      noPosts: "Пока нет постов.",
     },
     contacts: {
       title: "Контакты",
@@ -794,9 +739,7 @@ const I18N = {
     },
     blog: {
       title: "Blog about housing rights",
-      subtitle:
-        "Articles and cases. Admin creates posts, users comment.",
-      badge: "Article",
+      subtitle: "Articles and cases.",
       createPost: "Create post",
       titleRu: "Title (RU)",
       titleEn: "Title (EN)",
@@ -807,19 +750,8 @@ const I18N = {
       orPasteUrl: "or paste URL",
       publish: "Publish",
       postCreated: "Post published",
-      articleTitle: "How to use 402‑FZ against a management company",
-      articleBody:
-        "The idea is simple: instead of filing a complaint right away, you first request documents from the management company under the accounting law. Without documents it is hard to argue about \"overstated charges\", so Konstruct focuses on the correct request.",
-      steps: [
-        "Understand which documents you can request.",
-        "Form a neat written request under 402‑FZ and the Housing Code.",
-        "Use the response as evidence in complaints and lawsuits.",
-      ],
-      commentsTitle: "Comments",
-      commentsEmpty: "No comments yet. Be the first one.",
-      commentsLabel: "Leave a comment",
-      commentsPlaceholder: "Share your experience or ask a question...",
-      commentsButton: "Send",
+      backLink: "Back to Home",
+      noPosts: "No posts yet.",
     },
     contacts: {
       title: "Contacts",
@@ -1039,22 +971,6 @@ async function createOrder() {
     render();
   } catch (e) {
     alert(state.lang === 'ru' ? 'Ошибка: ' + (e.message || 'Проверьте подключение') : 'Error: ' + (e.message || 'Check connection'));
-  }
-}
-
-async function addComment(postId, text) {
-  if (!text || !text.trim()) return;
-  if (!state.user) {
-    alert(state.lang === 'ru' ? 'Войдите, чтобы комментировать' : 'Log in to comment');
-    return;
-  }
-  try {
-    await addBlogComment(postId, text.trim());
-    const post = state.blogPosts.find(p => p.id === postId);
-    if (post) post.comments = await fetchBlogComments(postId);
-    renderBlog();
-  } catch (e) {
-    alert(e.message || (state.lang === 'ru' ? 'Ошибка отправки' : 'Send error'));
   }
 }
 
@@ -2222,239 +2138,127 @@ function renderLegalPage(type) {
 
 // ========== BLOG PAGE ==========
 
-function openBlogPostModal(tBlog, ru) {
+function openBlogPostModal(t, ru) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
-  overlay.id = 'blog-post-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px';
   overlay.innerHTML = `
-    <div class="modal-content" style="max-width:500px;max-height:90vh;overflow:auto">
+    <div class="modal-content" style="max-width:500px;max-height:90vh;overflow:auto;background:var(--bg);border-radius:var(--radius-lg);padding:24px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h3 class="modal-title" style="margin:0">${tBlog.createPost}</h3>
-        <button class="blog-modal-close" type="button" aria-label="Close">&times;</button>
+        <h3 style="margin:0;font-size:18px">${t.createPost}</h3>
+        <button type="button" class="blog-modal-close" aria-label="Close" style="background:0;border:0;font-size:24px;cursor:pointer;color:var(--text-muted)">&times;</button>
       </div>
       <form id="blog-create-form">
+        <div class="field"><div class="stacked-label">${t.titleRu}</div><input class="input" name="title_ru" /></div>
+        <div class="field"><div class="stacked-label">${t.titleEn}</div><input class="input" name="title_en" /></div>
+        <div class="field"><div class="stacked-label">${t.bodyRu}</div><textarea class="textarea input" name="body_ru" rows="4"></textarea></div>
+        <div class="field"><div class="stacked-label">${t.bodyEn}</div><textarea class="textarea input" name="body_en" rows="4"></textarea></div>
         <div class="field">
-          <div class="stacked-label">${tBlog.titleRu}</div>
-          <input class="input" name="title_ru" placeholder="${ru ? 'Заголовок на русском' : 'Title in Russian'}" />
-        </div>
-        <div class="field">
-          <div class="stacked-label">${tBlog.titleEn}</div>
-          <input class="input" name="title_en" placeholder="${ru ? 'Заголовок на английском' : 'Title in English'}" />
-        </div>
-        <div class="field">
-          <div class="stacked-label">${tBlog.bodyRu}</div>
-          <textarea class="textarea input" name="body_ru" rows="4" placeholder="${ru ? 'Текст статьи' : 'Article text'}"></textarea>
-        </div>
-        <div class="field">
-          <div class="stacked-label">${tBlog.bodyEn}</div>
-          <textarea class="textarea input" name="body_en" rows="4" placeholder="${ru ? 'Article text' : 'Text in English'}"></textarea>
-        </div>
-        <div class="field">
-          <div class="stacked-label">${tBlog.addPhoto} / ${tBlog.addVideo}</div>
+          <div class="stacked-label">${t.addPhoto} / ${t.addVideo}</div>
           <input type="file" id="blog-media-input" accept="image/*,video/*" multiple />
-          <div class="small muted-text" style="margin-top:4px">${tBlog.orPasteUrl}</div>
+          <div class="small muted-text" style="margin-top:4px">${t.orPasteUrl}</div>
           <input type="url" id="blog-media-url" class="input" placeholder="https://..." style="margin-top:4px" />
           <div id="blog-media-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
         </div>
         <div style="display:flex;gap:8px;margin-top:16px">
-          <button type="submit" class="primary-btn">${tBlog.publish}</button>
-          <button type="button" class="secondary-btn blog-modal-close">${state.lang === 'ru' ? 'Закрыть' : 'Close'}</button>
+          <button type="submit" class="primary-btn">${t.publish}</button>
+          <button type="button" class="secondary-btn blog-modal-close">${ru ? 'Закрыть' : 'Close'}</button>
         </div>
       </form>
     </div>
   `;
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px';
   document.body.appendChild(overlay);
-
   const close = () => overlay.remove();
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  overlay.querySelectorAll('.blog-modal-close').forEach((b) => b.addEventListener('click', close));
+  overlay.querySelectorAll('.blog-modal-close').forEach(b => b.addEventListener('click', close));
 
+  let media = [];
   const form = overlay.querySelector('#blog-create-form');
   const mediaInput = overlay.querySelector('#blog-media-input');
-  const mediaPreview = overlay.querySelector('#blog-media-preview');
-  const mediaUrlInput = overlay.querySelector('#blog-media-url');
-  let pendingMedia = [];
+  const mediaUrl = overlay.querySelector('#blog-media-url');
+  const preview = overlay.querySelector('#blog-media-preview');
 
-  if (mediaInput) {
-    mediaInput.addEventListener('change', async (e) => {
-      const files = Array.from(e.target.files || []);
-      for (const f of files) {
-        try {
-          const m = await uploadBlogMedia(f);
-          pendingMedia.push(m);
-          const el = m.type === 'video'
-            ? `<video controls style="width:80px;height:60px;object-fit:cover;border-radius:6px" src="${escapeHtml(m.url)}"></video>`
-            : `<img src="${escapeHtml(m.url)}" style="width:80px;height:60px;object-fit:cover;border-radius:6px" alt="" />`;
-          mediaPreview.innerHTML += el;
-        } catch (err) {
-          alert(err.message);
-        }
-      }
-      mediaInput.value = '';
-    });
-  }
-  if (mediaUrlInput) {
-    mediaUrlInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const url = mediaUrlInput.value.trim();
-        if (!url) return;
-        const type = /\.(mp4|webm|ogg|mov)$/i.test(url) ? 'video' : 'photo';
-        pendingMedia.push({ type, url });
-        const el = type === 'video'
-          ? `<video controls style="width:80px;height:60px;object-fit:cover;border-radius:6px" src="${escapeHtml(url)}"></video>`
-          : `<img src="${escapeHtml(url)}" style="width:80px;height:60px;object-fit:cover;border-radius:6px" alt="" />`;
-        mediaPreview.innerHTML += el;
-        mediaUrlInput.value = '';
-      }
-    });
-  }
-
-  if (form) {
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const fd = new FormData(form);
-      const title_ru = fd.get('title_ru')?.toString().trim() || '';
-      const title_en = fd.get('title_en')?.toString().trim() || '';
-      const body_ru = fd.get('body_ru')?.toString().trim() || '';
-      const body_en = fd.get('body_en')?.toString().trim() || '';
-      if (!title_ru && !title_en) {
-        alert(ru ? 'Укажите заголовок' : 'Enter title');
-        return;
-      }
-      const btn = form.querySelector('button[type="submit"]');
-      if (btn) btn.disabled = true;
+  if (mediaInput) mediaInput.addEventListener('change', async (e) => {
+    for (const f of Array.from(e.target.files || [])) {
       try {
-        await createBlogPost({ title_ru, title_en, body_ru, body_en, media: pendingMedia });
-        close();
-        alert(tBlog.postCreated);
-        renderBlog();
-      } catch (err) {
-        alert(err.message);
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    });
-  }
+        const m = await uploadBlogMedia(f);
+        media.push(m);
+        preview.innerHTML += m.type === 'video' ? `<video controls style="width:80px;height:60px;object-fit:cover;border-radius:6px" src="${escapeHtml(m.url)}"></video>` : `<img src="${escapeHtml(m.url)}" style="width:80px;height:60px;object-fit:cover;border-radius:6px" alt="" />`;
+      } catch (err) { alert(err.message); }
+    }
+    mediaInput.value = '';
+  });
+  if (mediaUrl) mediaUrl.addEventListener('keypress', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const url = mediaUrl.value.trim();
+    if (!url) return;
+    const type = /\.(mp4|webm|ogg|mov)$/i.test(url) ? 'video' : 'photo';
+    media.push({ type, url });
+    preview.innerHTML += type === 'video' ? `<video controls style="width:80px;height:60px;object-fit:cover;border-radius:6px" src="${escapeHtml(url)}"></video>` : `<img src="${escapeHtml(url)}" style="width:80px;height:60px;object-fit:cover;border-radius:6px" alt="" />`;
+    mediaUrl.value = '';
+  });
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const title_ru = (fd.get('title_ru') || '').toString().trim();
+    const title_en = (fd.get('title_en') || '').toString().trim();
+    const body_ru = (fd.get('body_ru') || '').toString().trim();
+    const body_en = (fd.get('body_en') || '').toString().trim();
+    if (!title_ru && !title_en) { alert(ru ? 'Укажите заголовок' : 'Enter title'); return; }
+    const btn = form.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = true;
+    try {
+      await createBlogPost({ title_ru, title_en, body_ru, body_en, media });
+      close();
+      alert(t.postCreated);
+      renderBlog();
+    } catch (err) { alert(err.message); }
+    finally { if (btn) btn.disabled = false; }
+  });
 }
 
-async function renderBlog() {
-  const tBlog = I18N[state.lang].blog;
-  const lang = state.lang;
-  const ru = lang === 'ru';
-
-  const addPostBtnHtml = `<button class="blog-add-post-btn" id="blog-add-post-btn" title="${tBlog.createPost}" aria-label="${tBlog.createPost}">
-         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-       </button>`;
-
+function renderBlog() {
+  const t = I18N[state.lang].blog;
+  const ru = state.lang === 'ru';
   appRoot.innerHTML = `
-    <div class="landing blog-page" style="position:relative">
-      <section class="section blog-hero-section">
-        <div class="neo-card" style="position:relative">
-          ${addPostBtnHtml}
-          <a href="#" class="back-link">&larr; ${ru ? 'На главную' : 'Back to Home'}</a>
-          <h1 class="page-title">${tBlog.title}</h1>
-          <p class="section-subtitle">${tBlog.subtitle}</p>
-        </div>
-      </section>
-      <section class="section blog-posts-section" id="blog-posts-section">
+    <div class="blog-page-wrap" style="position:relative;padding:20px 0">
+      <div class="neo-card blog-hero-card" style="position:relative;padding:40px 30px;text-align:center">
+        <button type="button" class="blog-add-btn" id="blog-add-btn" title="${t.createPost}" aria-label="${t.createPost}">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <a href="#" class="back-link">← ${t.backLink}</a>
+        <h1 class="page-title" style="margin:16px 0 8px">${t.title}</h1>
+        <p class="section-subtitle" style="margin:0">${t.subtitle}</p>
+      </div>
+      <section class="blog-posts" id="blog-posts" style="margin-top:24px">
         <p class="small muted-text">${ru ? 'Загрузка...' : 'Loading...'}</p>
       </section>
     </div>
   `;
 
-  document.getElementById('blog-add-post-btn')?.addEventListener('click', () => openBlogPostModal(tBlog, ru));
-  document.querySelector('.back-link')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    window.location.hash = '';
-    render();
-  });
+  document.getElementById('blog-add-btn')?.addEventListener('click', () => openBlogPostModal(t, ru));
+  document.querySelector('.back-link')?.addEventListener('click', (e) => { e.preventDefault(); window.location.hash = ''; render(); });
 
-  try {
-    const timeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms));
-    await Promise.race([fetchBlogPosts(), timeout(8000)]);
-  } catch {
-    state.blogPosts = [];
-  }
-  try {
-    for (const post of state.blogPosts || []) {
-      post.comments = await fetchBlogComments(post.id).catch(() => []);
+  (async () => {
+    try {
+      await Promise.race([fetchBlogPosts(), new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 8000))]);
+    } catch { state.blogPosts = []; }
+    const postsEl = document.getElementById('blog-posts');
+    if (!postsEl) return;
+    if (!state.blogPosts || state.blogPosts.length === 0) {
+      postsEl.innerHTML = `<p class="small muted-text">${t.noPosts}</p>`;
+      return;
     }
-  } catch {
-    state.blogPosts = state.blogPosts || [];
-  }
-
-  const formatDate = (d) => (d ? new Date(d).toLocaleDateString(ru ? 'ru-RU' : 'en-US') : '');
-
-  const postsHTML = (state.blogPosts || [])
-    .map((post) => {
+    const formatDate = (d) => d ? new Date(d).toLocaleDateString(ru ? 'ru-RU' : 'en-US') : '';
+    postsEl.innerHTML = state.blogPosts.map(post => {
       const title = ru ? (post.title_ru || post.title_en) : (post.title_en || post.title_ru);
       const body = ru ? (post.body_ru || post.body_en) : (post.body_en || post.body_ru);
-      const media = post.media || [];
-      const mediaHtml = media
-        .map((m) => {
-          if (m.type === 'video') {
-            return `<video controls style="max-width:100%;border-radius:8px;margin:8px 0" src="${escapeHtml(m.url)}"></video>`;
-          }
-          return `<img src="${escapeHtml(m.url)}" alt="" style="max-width:100%;border-radius:8px;margin:8px 0;display:block" loading="lazy">`;
-        })
-        .join('');
-      const comments = post.comments || [];
-      return `
-    <article class="neo-card blog-post">
-      <div class="blog-post-header">
-        <h2 class="blog-post-title">${escapeHtml(title)}</h2>
-        <span class="blog-post-date">${formatDate(post.created_at)}</span>
-      </div>
-      ${mediaHtml}
-      <p class="blog-post-body" style="white-space:pre-wrap">${escapeHtml(body)}</p>
-      <div class="blog-comments-section">
-        <h3 class="comments-title">${tBlog.commentsTitle} (${comments.length})</h3>
-        <div class="comments-list">
-          ${
-            comments.length === 0
-              ? `<p class="small muted-text">${tBlog.commentsEmpty}</p>`
-              : comments
-                  .map(
-                    (c) => `
-              <div class="comment">
-                <div class="comment-author">${escapeHtml(c.author_name || '—')}</div>
-                <div class="comment-body">${escapeHtml(c.text)}</div>
-              </div>
-            `
-                  )
-                  .join('')
-          }
-        </div>
-        <div class="divider"></div>
-        <div class="field">
-          <div class="stacked-label">${tBlog.commentsLabel}</div>
-          <textarea class="textarea comment-input" data-post-id="${post.id}" placeholder="${tBlog.commentsPlaceholder}"></textarea>
-        </div>
-        <button class="primary-btn btn-add-comment" data-post-id="${post.id}">${tBlog.commentsButton}</button>
-      </div>
-    </article>
-  `;
-    })
-    .join('');
-
-  const postsSection = document.getElementById('blog-posts-section');
-  if (postsSection) {
-    postsSection.innerHTML = state.blogPosts.length === 0
-      ? `<p class="small muted-text">${ru ? 'Пока нет постов.' : 'No posts yet.'}</p>`
-      : postsHTML;
-  }
-
-  document.querySelectorAll('.btn-add-comment').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const postId = btn.getAttribute('data-post-id');
-      const textarea = document.querySelector(`.comment-input[data-post-id="${postId}"]`);
-      if (textarea && textarea.value.trim()) {
-        addComment(postId, textarea.value);
-      }
-    });
-  });
+      const mediaHtml = (post.media || []).map(m => m.type === 'video' ? `<video controls style="max-width:100%;border-radius:8px;margin:8px 0" src="${escapeHtml(m.url)}"></video>` : `<img src="${escapeHtml(m.url)}" alt="" style="max-width:100%;border-radius:8px;margin:8px 0;display:block" loading="lazy">`).join('');
+      return `<article class="neo-card" style="padding:24px;margin-bottom:16px"><h2 style="font-size:20px;margin:0 0 8px">${escapeHtml(title)}</h2><span class="small muted-text">${formatDate(post.created_at)}</span>${mediaHtml}<p style="white-space:pre-wrap;margin:16px 0 0;line-height:1.6">${escapeHtml(body)}</p></article>`;
+    }).join('');
+  })();
 }
 
 // ========== PROFILE UI ==========
@@ -2607,24 +2411,9 @@ function initShell() {
       }
 
       const href = link.getAttribute("href");
-      const currentHash = window.location.hash;
-      const isOnBlogPage = currentHash === "#blog" || currentHash.startsWith("#blog/");
-
-      // Блог, Админ — отдельные страницы: явная навигация
       if (href === "#blog" || href === "#admin") {
         e.preventDefault();
         window.location.hash = href || "#";
-        return;
-      }
-      if (isOnBlogPage && href !== "#blog") {
-        e.preventDefault();
-        window.location.hash = href;
-        setTimeout(() => {
-          const target = document.querySelector(href);
-          if (target) {
-            target.scrollIntoView({ behavior: "smooth" });
-          }
-        }, 50);
       }
     });
   });
