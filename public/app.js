@@ -2344,13 +2344,45 @@ async function renderBlog() {
   const lang = state.lang;
   const ru = lang === 'ru';
 
+  const addPostBtnHtml = `<button class="blog-add-post-btn" id="blog-add-post-btn" title="${tBlog.createPost}" aria-label="${tBlog.createPost}">
+         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+       </button>`;
+
+  appRoot.innerHTML = `
+    <div class="landing blog-page" style="position:relative">
+      <section class="section blog-hero-section">
+        <div class="neo-card" style="position:relative">
+          ${addPostBtnHtml}
+          <a href="#" class="back-link">&larr; ${ru ? 'На главную' : 'Back to Home'}</a>
+          <h1 class="page-title">${tBlog.title}</h1>
+          <p class="section-subtitle">${tBlog.subtitle}</p>
+        </div>
+      </section>
+      <section class="section blog-posts-section" id="blog-posts-section">
+        <p class="small muted-text">${ru ? 'Загрузка...' : 'Loading...'}</p>
+      </section>
+    </div>
+  `;
+
+  document.getElementById('blog-add-post-btn')?.addEventListener('click', () => openBlogPostModal(tBlog, ru));
+  document.querySelector('.back-link')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.location.hash = '';
+    render();
+  });
+
   try {
-    await fetchBlogPosts();
-    for (const post of state.blogPosts) {
-      post.comments = await fetchBlogComments(post.id);
-    }
-  } catch (e) {
+    const timeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms));
+    await Promise.race([fetchBlogPosts(), timeout(8000)]);
+  } catch {
     state.blogPosts = [];
+  }
+  try {
+    for (const post of state.blogPosts || []) {
+      post.comments = await fetchBlogComments(post.id).catch(() => []);
+    }
+  } catch {
+    state.blogPosts = state.blogPosts || [];
   }
 
   const formatDate = (d) => (d ? new Date(d).toLocaleDateString(ru ? 'ru-RU' : 'en-US') : '');
@@ -2407,27 +2439,12 @@ async function renderBlog() {
     })
     .join('');
 
-  const addPostBtnHtml = `<button class="blog-add-post-btn" id="blog-add-post-btn" title="${tBlog.createPost}" aria-label="${tBlog.createPost}">
-         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-       </button>`;
-
-  appRoot.innerHTML = `
-    <div class="landing blog-page" style="position:relative">
-      <section class="section blog-hero-section">
-        <div class="neo-card" style="position:relative">
-          ${addPostBtnHtml}
-          <a href="#" class="back-link">&larr; ${ru ? 'На главную' : 'Back to Home'}</a>
-          <h1 class="page-title">${tBlog.title}</h1>
-          <p class="section-subtitle">${tBlog.subtitle}</p>
-        </div>
-      </section>
-      <section class="section blog-posts-section">
-        ${state.blogPosts.length === 0 ? `<p class="small muted-text">${ru ? 'Пока нет постов.' : 'No posts yet.'}</p>` : postsHTML}
-      </section>
-    </div>
-  `;
-
-  document.getElementById('blog-add-post-btn')?.addEventListener('click', () => openBlogPostModal(tBlog, ru));
+  const postsSection = document.getElementById('blog-posts-section');
+  if (postsSection) {
+    postsSection.innerHTML = state.blogPosts.length === 0
+      ? `<p class="small muted-text">${ru ? 'Пока нет постов.' : 'No posts yet.'}</p>`
+      : postsHTML;
+  }
 
   document.querySelectorAll('.btn-add-comment').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -2437,12 +2454,6 @@ async function renderBlog() {
         addComment(postId, textarea.value);
       }
     });
-  });
-
-  document.querySelector('.back-link')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    window.location.hash = '';
-    render();
   });
 }
 
