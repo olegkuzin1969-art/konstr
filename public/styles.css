@@ -458,6 +458,34 @@ html {
   text-decoration: none;
 }
 
+/* Компактные кнопки в админ-панели */
+.admin-order-card .secondary-btn,
+.admin-order-card .primary-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.admin-order-card .admin-comment-input {
+  padding: 6px 10px;
+  font-size: 12px;
+  min-width: 140px;
+}
+
+.admin-order-card .admin-revision-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.admin-order-card .admin-revision-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-order-card .admin-revision-row .secondary-btn {
+  flex-shrink: 0;
+}
+
 .page-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
@@ -1140,13 +1168,15 @@ html {
 
 .modal-overlay .modal-actions {
   display: flex;
-  gap: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
   flex-shrink: 0;
 }
 
 .modal-overlay .modal-actions .primary-btn,
 .modal-overlay .modal-actions .secondary-btn {
-  flex: 1;
+  padding: 8px 14px;
+  font-size: 13px;
 }
 
 .price-list {

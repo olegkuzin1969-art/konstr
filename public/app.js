@@ -1997,8 +1997,8 @@ async function renderAdmin() {
             <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0">
               ${canSetReady ? `<button class="secondary-btn admin-set-ready" data-order-id="${id}">${t.setReady}</button>` : ''}
               ${canSetRevision ? `
-                <div class="admin-revision-row" style="display:flex;gap:8px;align-items:center">
-                  <input type="text" class="input admin-comment-input" data-order-id="${id}" placeholder="${t.commentPlaceholder}" style="min-width:160px" value="${escapeHtml(o.revision_comment || '')}" />
+                <div class="admin-revision-row" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                  <input type="text" class="input admin-comment-input" data-order-id="${id}" placeholder="${t.commentPlaceholder}" value="${escapeHtml(o.revision_comment || '')}" />
                   <button class="secondary-btn admin-set-revision" data-order-id="${id}" data-comment-input="admin-comment-${i}">${t.setRevision}</button>
                 </div>
               ` : ''}
