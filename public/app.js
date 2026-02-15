@@ -356,12 +356,63 @@ async function createBlogPost(payload) {
   return data.post;
 }
 
+async function updateBlogPost(id, payload) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
+  if (isInTelegramWebApp() && window.Telegram?.WebApp?.initData) payload.initData = window.Telegram.WebApp.initData;
+  payload.id = id;
+  const res = await fetch(API_BASE_BLOG + '/api/blog', { method: 'PUT', headers, body: JSON.stringify(payload) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Ошибка');
+  return data.post;
+}
+
+async function deleteBlogPost(id) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
+  const res = await fetch(API_BASE_BLOG + '/api/blog?id=' + encodeURIComponent(id), { method: 'DELETE', headers });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Ошибка');
+  return data;
+}
+
+const BLOG_IMAGE_MAX_WIDTH = 1200;
+const BLOG_IMAGE_QUALITY = 0.82;
+
+function resizeImageFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) { resolve(file); return; }
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.width;
+      let h = img.height;
+      if (w <= BLOG_IMAGE_MAX_WIDTH && h <= BLOG_IMAGE_MAX_WIDTH) { resolve(file); return; }
+      if (w > h) { h = Math.round(h * BLOG_IMAGE_MAX_WIDTH / w); w = BLOG_IMAGE_MAX_WIDTH; } else { w = Math.round(w * BLOG_IMAGE_MAX_WIDTH / h); h = BLOG_IMAGE_MAX_WIDTH; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(blob => {
+        if (blob) resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+        else resolve(file);
+      }, 'image/jpeg', BLOG_IMAGE_QUALITY);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 async function uploadBlogMedia(file) {
+  const isImage = file.type.startsWith('image/');
+  const toUpload = isImage ? await resizeImageFile(file) : file;
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = async () => {
       const base64 = reader.result.split(',')[1];
-      const payload = { file: base64, filename: file.name, type: file.type.startsWith('video/') ? 'video' : 'photo' };
+      const payload = { file: base64, filename: toUpload.name, type: toUpload.type.startsWith('video/') ? 'video' : 'photo' };
       if (isInTelegramWebApp() && window.Telegram?.WebApp?.initData) payload.initData = window.Telegram.WebApp.initData;
       const headers = { 'Content-Type': 'application/json' };
       if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
@@ -372,7 +423,7 @@ async function uploadBlogMedia(file) {
         resolve({ type: data.type || 'photo', url: data.url });
       } catch (e) { reject(e); }
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(toUpload);
   });
 }
 
@@ -495,6 +546,11 @@ const I18N = {
       commentPlaceholder: "Написать комментарий...",
       commentButton: "Отправить",
       loginToComment: "Войдите, чтобы комментировать",
+      editPost: "Редактировать",
+      deletePost: "Удалить",
+      confirmDelete: "Удалить этот пост?",
+      postUpdated: "Пост сохранён",
+      postDeleted: "Пост удалён",
     },
     contacts: {
       title: "Контакты",
@@ -778,6 +834,11 @@ const I18N = {
       commentPlaceholder: "Write a comment...",
       commentButton: "Send",
       loginToComment: "Log in to comment",
+      editPost: "Edit",
+      deletePost: "Delete",
+      confirmDelete: "Delete this post?",
+      postUpdated: "Post saved",
+      postDeleted: "Post deleted",
     },
     contacts: {
       title: "Contacts",
@@ -2245,6 +2306,92 @@ function openBlogPostModal(t, ru) {
   });
 }
 
+function openBlogEditModal(post, t, ru) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px';
+  overlay.innerHTML = `
+    <div class="modal-content" style="max-width:500px;max-height:90vh;overflow:auto;background:var(--bg);border-radius:var(--radius-lg);padding:24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 style="margin:0;font-size:18px">${t.editPost}</h3>
+        <button type="button" class="blog-modal-close" aria-label="Close" style="background:0;border:0;font-size:24px;cursor:pointer;color:var(--text-muted)">&times;</button>
+      </div>
+      <form id="blog-edit-form">
+        <div class="field"><div class="stacked-label">${t.titleRu}</div><input class="input" name="title_ru" value="${escapeHtml(post.title_ru || '')}" /></div>
+        <div class="field"><div class="stacked-label">${t.titleEn}</div><input class="input" name="title_en" value="${escapeHtml(post.title_en || '')}" /></div>
+        <div class="field"><div class="stacked-label">${t.bodyRu}</div><textarea class="textarea input" name="body_ru" rows="4">${escapeHtml(post.body_ru || '')}</textarea></div>
+        <div class="field"><div class="stacked-label">${t.bodyEn}</div><textarea class="textarea input" name="body_en" rows="4">${escapeHtml(post.body_en || '')}</textarea></div>
+        <div class="field">
+          <div class="stacked-label">${t.addPhoto} / ${t.addVideo}</div>
+          <input type="file" id="blog-edit-media-input" accept="image/*,video/*" multiple />
+          <div class="small muted-text" style="margin-top:4px">${t.orPasteUrl}</div>
+          <input type="url" id="blog-edit-media-url" class="input" placeholder="https://..." style="margin-top:4px" />
+          <div id="blog-edit-media-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button type="submit" class="primary-btn">${ru ? 'Сохранить' : 'Save'}</button>
+          <button type="button" class="secondary-btn blog-modal-close">${ru ? 'Закрыть' : 'Close'}</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  overlay.querySelectorAll('.blog-modal-close').forEach(b => b.addEventListener('click', close));
+
+  let media = Array.isArray(post.media) ? post.media.map(m => ({ type: m.type || 'photo', url: m.url || m.src })) : [];
+  const form = overlay.querySelector('#blog-edit-form');
+  const mediaInput = overlay.querySelector('#blog-edit-media-input');
+  const mediaUrl = overlay.querySelector('#blog-edit-media-url');
+  const preview = overlay.querySelector('#blog-edit-media-preview');
+  (post.media || []).forEach(m => {
+    const url = m.url || m.src;
+    if (!url) return;
+    preview.innerHTML += m.type === 'video' ? `<video controls style="width:80px;height:60px;object-fit:cover;border-radius:6px" src="${escapeHtml(url)}"></video>` : `<img src="${escapeHtml(url)}" style="width:80px;height:60px;object-fit:cover;border-radius:6px" alt="" />`;
+  });
+
+  if (mediaInput) mediaInput.addEventListener('change', async (e) => {
+    for (const f of Array.from(e.target.files || [])) {
+      try {
+        const m = await uploadBlogMedia(f);
+        media.push(m);
+        preview.innerHTML += m.type === 'video' ? `<video controls style="width:80px;height:60px;object-fit:cover;border-radius:6px" src="${escapeHtml(m.url)}"></video>` : `<img src="${escapeHtml(m.url)}" style="width:80px;height:60px;object-fit:cover;border-radius:6px" alt="" />`;
+      } catch (err) { alert(err.message); }
+    }
+    mediaInput.value = '';
+  });
+  if (mediaUrl) mediaUrl.addEventListener('keypress', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const url = mediaUrl.value.trim();
+    if (!url) return;
+    const type = /\.(mp4|webm|ogg|mov)$/i.test(url) ? 'video' : 'photo';
+    media.push({ type, url });
+    preview.innerHTML += type === 'video' ? `<video controls style="width:80px;height:60px;object-fit:cover;border-radius:6px" src="${escapeHtml(url)}"></video>` : `<img src="${escapeHtml(url)}" style="width:80px;height:60px;object-fit:cover;border-radius:6px" alt="" />`;
+    mediaUrl.value = '';
+  });
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const title_ru = (fd.get('title_ru') || '').toString().trim();
+    const title_en = (fd.get('title_en') || '').toString().trim();
+    const body_ru = (fd.get('body_ru') || '').toString().trim();
+    const body_en = (fd.get('body_en') || '').toString().trim();
+    if (!title_ru && !title_en) { alert(ru ? 'Укажите заголовок' : 'Enter title'); return; }
+    const btn = form.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = true;
+    try {
+      await updateBlogPost(post.id, { title_ru, title_en, body_ru, body_en, media });
+      close();
+      alert(t.postUpdated);
+      renderBlog();
+    } catch (err) { alert(err.message); }
+    finally { if (btn) btn.disabled = false; }
+  });
+}
+
 function renderBlog() {
   const t = I18N[state.lang].blog;
   const ru = state.lang === 'ru';
@@ -2282,18 +2429,27 @@ function renderBlog() {
         post.comments = await fetchBlogComments(post.id).catch(() => []);
       } catch { post.comments = []; }
     }
+    const adminBtns = (p) => state.isAdmin ? `<div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="secondary-btn blog-edit-post" data-post-id="${p.id}">${t.editPost}</button><button type="button" class="secondary-btn blog-delete-post" data-post-id="${p.id}">${t.deletePost}</button></div>` : '';
     postsEl.innerHTML = state.blogPosts.map(post => {
       const title = ru ? (post.title_ru || post.title_en) : (post.title_en || post.title_ru);
       const body = ru ? (post.body_ru || post.body_en) : (post.body_en || post.body_ru);
-      const mediaHtml = (post.media || []).map(m => m.type === 'video' ? `<video controls style="max-width:100%;border-radius:8px;margin:8px 0" src="${escapeHtml(m.url)}"></video>` : `<img src="${escapeHtml(m.url)}" alt="" style="max-width:100%;border-radius:8px;margin:8px 0;display:block" loading="lazy">`).join('');
+      const mediaHtml = (post.media || []).map(m => {
+        const url = m.url || m.src;
+        return m.type === 'video' ? `<video controls style="max-width:100%;max-height:400px;border-radius:8px;margin:8px 0" src="${escapeHtml(url)}"></video>` : `<img src="${escapeHtml(url)}" alt="" style="max-width:100%;max-height:400px;object-fit:contain;border-radius:8px;margin:8px 0;display:block" loading="lazy">`;
+      }).join('');
       const comments = post.comments || [];
       const commentsList = comments.length === 0
         ? `<p class="small muted-text" style="margin:0 0 12px">${t.commentsEmpty}</p>`
         : comments.map(c => `<div style="background:var(--bg-elevated);border-radius:8px;padding:12px 16px;margin-bottom:8px"><div style="font-weight:600;font-size:13px;color:var(--accent);margin-bottom:4px">${escapeHtml(c.author_name || '—')}</div><div style="font-size:14px;line-height:1.5">${escapeHtml(c.text)}</div></div>`).join('');
       return `
         <article class="neo-card blog-post-card" data-post-id="${post.id}" style="padding:24px;margin-bottom:16px">
-          <h2 style="font-size:20px;margin:0 0 8px">${escapeHtml(title)}</h2>
-          <span class="small muted-text">${formatDate(post.created_at)}</span>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+            <div style="flex:1;min-width:0">
+              <h2 style="font-size:20px;margin:0 0 8px">${escapeHtml(title)}</h2>
+              <span class="small muted-text">${formatDate(post.created_at)}</span>
+            </div>
+            ${adminBtns(post)}
+          </div>
           ${mediaHtml}
           <p style="white-space:pre-wrap;margin:16px 0 0;line-height:1.6">${escapeHtml(body)}</p>
           <div class="blog-comments" style="border-top:1px solid var(--border);margin-top:20px;padding-top:16px">
@@ -2317,6 +2473,25 @@ function renderBlog() {
           await addBlogComment(postId, text);
           const post = state.blogPosts.find(p => p.id === postId);
           if (post) post.comments = await fetchBlogComments(postId);
+          renderBlog();
+        } catch (e) { alert(e.message); }
+      });
+    });
+
+    document.querySelectorAll('.blog-edit-post').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const postId = btn.getAttribute('data-post-id');
+        const post = state.blogPosts.find(p => p.id === postId);
+        if (post) openBlogEditModal(post, t, ru);
+      });
+    });
+    document.querySelectorAll('.blog-delete-post').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm(t.confirmDelete)) return;
+        const postId = btn.getAttribute('data-post-id');
+        try {
+          await deleteBlogPost(postId);
+          alert(t.postDeleted);
           renderBlog();
         } catch (e) { alert(e.message); }
       });

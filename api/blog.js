@@ -76,11 +76,11 @@ async function isAdmin(supabase, userId) {
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!['GET', 'POST', 'PUT', 'DELETE'].includes(req.method)) return res.status(405).json({ error: 'Method not allowed' });
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return res.status(500).json({ error: 'Server config error' });
 
   try {
@@ -147,6 +147,41 @@ module.exports = async function handler(req, res) {
       }
 
       return res.status(400).json({ error: 'Некорректный запрос' });
+    }
+
+    if (req.method === 'PUT') {
+      const user = await resolveUserId({ body, headers: req.headers });
+      if (!user) return res.status(401).json({ error: 'Необходима авторизация' });
+      if (!(await isAdmin(supabase, user.id))) return res.status(403).json({ error: 'Только админ может редактировать посты' });
+      const id = body.id;
+      if (!id) return res.status(400).json({ error: 'Укажите id поста' });
+      const title_ru = String(body.title_ru ?? '').trim();
+      const title_en = String(body.title_en ?? '').trim();
+      const body_ru = String(body.body_ru ?? '').trim();
+      const body_en = String(body.body_en ?? '').trim();
+      const media = Array.isArray(body.media) ? body.media : [];
+      const row = {
+        updated_at: new Date().toISOString(),
+        title_ru: title_ru || title_en || 'Post',
+        title_en: title_en || title_ru || 'Post',
+        body_ru: body_ru || body_en || '',
+        body_en: body_en || body_ru || '',
+        media: media.filter(m => m && (m.url || m.src)).map(m => ({ type: m.type || 'photo', url: m.url || m.src })),
+      };
+      const { data: post, error } = await supabase.from('blog_posts').update(row).eq('id', id).select().single();
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(200).json({ post });
+    }
+
+    if (req.method === 'DELETE') {
+      const user = await resolveUserId({ body: {}, headers: req.headers, query });
+      if (!user) return res.status(401).json({ error: 'Необходима авторизация' });
+      if (!(await isAdmin(supabase, user.id))) return res.status(403).json({ error: 'Только админ может удалять посты' });
+      const id = query.id || query.postId;
+      if (!id) return res.status(400).json({ error: 'Укажите id поста' });
+      const { error } = await supabase.from('blog_posts').delete().eq('id', id);
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(200).json({ ok: true });
     }
 
     return res.status(405).end();
