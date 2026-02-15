@@ -342,6 +342,17 @@ async function addBlogComment(postId, text) {
   return data.comment;
 }
 
+async function updateBlogComment(commentId, text) {
+  const payload = { commentId, text: String(text || '').trim() };
+  if (isInTelegramWebApp() && window.Telegram?.WebApp?.initData) payload.initData = window.Telegram.WebApp.initData;
+  const headers = { 'Content-Type': 'application/json' };
+  if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
+  const res = await fetch(API_BASE_BLOG + '/api/blog', { method: 'PUT', headers, body: JSON.stringify(payload) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Ошибка');
+  return data.comment;
+}
+
 async function createBlogPost(payload) {
   const headers = { 'Content-Type': 'application/json' };
   if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
@@ -546,6 +557,9 @@ const I18N = {
       commentPlaceholder: "Написать комментарий...",
       commentButton: "Отправить",
       loginToComment: "Войдите, чтобы комментировать",
+      editComment: "Редактировать",
+      saveComment: "Сохранить",
+      cancelComment: "Отмена",
       editPost: "Редактировать",
       deletePost: "Удалить",
       confirmDelete: "Удалить этот пост?",
@@ -834,6 +848,9 @@ const I18N = {
       commentPlaceholder: "Write a comment...",
       commentButton: "Send",
       loginToComment: "Log in to comment",
+      editComment: "Edit",
+      saveComment: "Save",
+      cancelComment: "Cancel",
       editPost: "Edit",
       deletePost: "Delete",
       confirmDelete: "Delete this post?",
@@ -2438,9 +2455,21 @@ function renderBlog() {
         return m.type === 'video' ? `<video controls style="max-width:100%;max-height:400px;border-radius:8px;margin:8px 0" src="${escapeHtml(url)}"></video>` : `<img src="${escapeHtml(url)}" alt="" style="max-width:100%;max-height:400px;object-fit:contain;border-radius:8px;margin:8px 0;display:block" loading="lazy">`;
       }).join('');
       const comments = post.comments || [];
+      const canEditComment = (c) => state.user && c.user_id && state.user.id && String(c.user_id) === String(state.user.id);
       const commentsList = comments.length === 0
         ? `<p class="small muted-text" style="margin:0 0 12px">${t.commentsEmpty}</p>`
-        : comments.map(c => `<div style="background:var(--bg-elevated);border-radius:8px;padding:12px 16px;margin-bottom:8px"><div style="font-weight:600;font-size:13px;color:var(--accent);margin-bottom:4px">${escapeHtml(c.author_name || '—')}</div><div style="font-size:14px;line-height:1.5">${escapeHtml(c.text)}</div></div>`).join('');
+        : comments.map(c => {
+          const canEdit = canEditComment(c);
+          return `<div class="blog-comment-item" data-comment-id="${c.id}" data-post-id="${post.id}" style="background:var(--bg-elevated);border-radius:8px;padding:12px 16px;margin-bottom:8px">
+            <div class="blog-comment-header" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:13px;color:var(--accent);margin-bottom:4px">${escapeHtml(c.author_name || '—')}</div>
+                <div class="blog-comment-body" style="font-size:14px;line-height:1.5">${escapeHtml(c.text)}</div>
+              </div>
+              ${canEdit ? `<button type="button" class="secondary-btn blog-edit-comment" data-comment-id="${c.id}" data-post-id="${post.id}" style="flex-shrink:0;padding:4px 10px;font-size:12px">${t.editComment}</button>` : ''}
+            </div>
+          </div>`;
+        }).join('');
       return `
         <article class="neo-card blog-post-card" data-post-id="${post.id}" style="padding:24px;margin-bottom:16px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
@@ -2494,6 +2523,44 @@ function renderBlog() {
           alert(t.postDeleted);
           renderBlog();
         } catch (e) { alert(e.message); }
+      });
+    });
+
+    document.querySelectorAll('.blog-edit-comment').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const commentId = btn.getAttribute('data-comment-id');
+        const postId = btn.getAttribute('data-post-id');
+        const item = btn.closest('.blog-comment-item');
+        const bodyEl = item?.querySelector('.blog-comment-body');
+        const headerEl = item?.querySelector('.blog-comment-header');
+        if (!bodyEl || !headerEl) return;
+        const currentText = bodyEl.textContent;
+        headerEl.innerHTML = `
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:13px;color:var(--accent);margin-bottom:8px">${escapeHtml(authorName)}</div>
+            <textarea class="input comment-edit-textarea" rows="3" style="width:100%;margin-bottom:8px;resize:vertical">${escapeHtml(currentText)}</textarea>
+            <div style="display:flex;gap:8px">
+              <button type="button" class="primary-btn blog-save-comment" data-comment-id="${commentId}" data-post-id="${postId}">${t.saveComment}</button>
+              <button type="button" class="secondary-btn blog-cancel-comment" data-post-id="${postId}">${t.cancelComment}</button>
+            </div>
+          </div>
+        `;
+        const textarea = headerEl.querySelector('.comment-edit-textarea');
+        const saveBtn = headerEl.querySelector('.blog-save-comment');
+        const cancelBtn = headerEl.querySelector('.blog-cancel-comment');
+        const authorName = bodyEl.previousElementSibling?.textContent || '';
+        saveBtn?.addEventListener('click', async () => {
+          const text = textarea?.value?.trim();
+          if (!text) return;
+          saveBtn.disabled = true;
+          try {
+            await updateBlogComment(commentId, text);
+            const post = state.blogPosts.find(p => p.id === postId);
+            if (post) post.comments = await fetchBlogComments(postId);
+            renderBlog();
+          } catch (e) { alert(e.message); saveBtn.disabled = false; }
+        });
+        cancelBtn?.addEventListener('click', () => renderBlog());
       });
     });
   })();

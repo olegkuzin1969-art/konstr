@@ -93,7 +93,7 @@ module.exports = async function handler(req, res) {
       if (postId) {
         const { data: comments, error } = await supabase
           .from('blog_comments')
-          .select('id, author_name, text, created_at')
+          .select('id, user_id, author_name, text, created_at')
           .eq('post_id', postId)
           .order('created_at', { ascending: true });
         if (error) return res.status(500).json({ error: error.message });
@@ -152,6 +152,17 @@ module.exports = async function handler(req, res) {
     if (req.method === 'PUT') {
       const user = await resolveUserId({ body, headers: req.headers });
       if (!user) return res.status(401).json({ error: 'Необходима авторизация' });
+
+      if (body.commentId && body.text !== undefined) {
+        const { data: existing } = await supabase.from('blog_comments').select('user_id').eq('id', body.commentId).single();
+        if (!existing || existing.user_id !== user.id) return res.status(403).json({ error: 'Можно редактировать только свои комментарии' });
+        const text = String(body.text || '').trim();
+        if (!text) return res.status(400).json({ error: 'Введите текст' });
+        const { data: comment, error } = await supabase.from('blog_comments').update({ text }).eq('id', body.commentId).select().single();
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(200).json({ comment });
+      }
+
       if (!(await isAdmin(supabase, user.id))) return res.status(403).json({ error: 'Только админ может редактировать посты' });
       const id = body.id;
       if (!id) return res.status(400).json({ error: 'Укажите id поста' });
