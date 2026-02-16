@@ -111,12 +111,32 @@ module.exports = async function handler(req, res) {
     const idempotenceKey = crypto.randomUUID();
     const auth = Buffer.from(`${YOOKASSA_SHOP_ID}:${YOOKASSA_SECRET_KEY}`).toString('base64');
 
+    const customerEmail = orderData.emailForReply && String(orderData.emailForReply).trim();
+    if (!customerEmail) {
+      return res.status(400).json({ error: 'Укажите email для отправки чека (поле «Email для ответа») или для связи)' });
+    }
+
+    const receipt = {
+      customer: { email: customerEmail },
+      items: [
+        {
+          description: withExpert ? 'Запрос в УК с проверкой эксперта (ст. 165 ЖК РФ)' : 'Запрос в УК (ст. 165 ЖК РФ)',
+          quantity: '1.00',
+          amount: { value: valueStr, currency: 'RUB' },
+          vat_code: 1,
+          payment_subject: 'service',
+          payment_mode: 'full_payment',
+        },
+      ],
+    };
+
     const yookassaBody = {
       amount: { value: valueStr, currency: 'RUB' },
       capture: true,
       confirmation: { type: 'redirect', return_url: returnUrl },
       description: 'Заказ запроса ст. 165 ЖК РФ',
       metadata: { payment_intent_id: intent.id },
+      receipt,
     };
 
     const yooRes = await fetch('https://api.yookassa.ru/v3/payments', {
