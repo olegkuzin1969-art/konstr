@@ -388,8 +388,14 @@ async function adminOrdersApi(method, body = {}) {
   } else {
     throw new Error('Необходима авторизация');
   }
-  if (method === 'GET' && payload.initData) {
-    url += '?initData=' + encodeURIComponent(payload.initData);
+  if (method === 'GET') {
+    const params = new URLSearchParams();
+    if (payload.resource) params.set('resource', payload.resource);
+    if (payload.initData) params.set('initData', payload.initData);
+    const qs = params.toString();
+    if (qs) url += '?' + qs;
+    // тело для GET не отправляем
+    payload = {};
   }
   const res = await fetch(url, {
     method,
