@@ -1500,7 +1500,7 @@ function formatOrderPreview(order) {
 }
 
 function showPaymentReturnLoader() {
-  const t = I18N[state.lang].constructor;
+  if (document.getElementById('payment-return-loader')) return;
   const loadingText = state.lang === 'ru' ? 'Проверка оплаты…' : 'Checking payment…';
   const el = document.createElement('div');
   el.className = 'payment-return-loader';
@@ -1516,8 +1516,10 @@ function hidePaymentReturnLoader() {
 async function applyPaymentReturn() {
   const params = new URLSearchParams(window.location.search);
   const payment = params.get('payment');
-  if (!payment) return;
-  showPaymentReturnLoader();
+  if (!payment) {
+    hidePaymentReturnLoader();
+    return;
+  }
   const t = I18N[state.lang].constructor;
   window.history.replaceState(null, '', window.location.pathname + '#profile');
   window.location.hash = '#profile';
@@ -1527,11 +1529,10 @@ async function applyPaymentReturn() {
       const data = await syncPaymentApi();
       msg = data.synced ? t.paymentSuccess : t.paymentError;
     }
-  } catch (_) {}
-  try {
     const orders = await fetchOrders().catch(() => []);
     state.profileOrders = orders || [];
-  } finally {
+  } catch (_) {}
+  finally {
     hidePaymentReturnLoader();
   }
   alert(msg);
