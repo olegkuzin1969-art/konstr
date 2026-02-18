@@ -49,7 +49,7 @@ const state = {
     templateId: "",
     fields: {}, // значения полей по ключу переменной (key → value); список ключей задаётся шаблоном
     services: {
-      coldWater: true,
+      coldWater: false,
       hotWater: false,
       wastewater: false,
       electricity: false,
@@ -997,6 +997,67 @@ const I18N = {
     admin: {
       title: "Админ-панель",
       subtitle: "Все заказы пользователей. Меняйте статус: готов (можно скачать) или на доработку (с комментарием).",
+      helpTitle: "Инструкция для админа",
+      helpOrdersTitle: "1. Управление заказами",
+      helpOrdersText: `
+<p><strong>Список заказов</strong><br />
+Во вкладке «Заказы» отображаются все оформленные пользователями документы. Каждый заказ содержит краткий превью-текст, данные пользователя и текущий статус.</p>
+
+<p><strong>Просмотр заказа</strong><br />
+Нажмите кнопку «Просмотр», чтобы открыть полный текст письма и данные пользователя. Отсюда вы можете скачать PDF (в реальном продукте — приложить к ответу пользователю).</p>
+
+<p><strong>Статусы заказа</strong><br />
+— <strong>В работе</strong>: начальный статус после оплаты.<br />
+— <strong>Готов</strong>: документ проверен, можно выдавать пользователю.<br />
+— <strong>На доработку</strong>: есть замечания, пользователю отправляется комментарий.</p>
+
+<p><strong>Как поменять статус</strong><br />
+— Кнопка «Готов»: ставит статус «Готов», комментарий очищается.<br />
+— Кнопка «На доработку»: укажите комментарий (замечания по тексту), затем нажмите кнопку — статус станет «На доработку», комментарий будет сохранён.</p>
+
+<p><strong>Требования к комментарию</strong><br />
+Если вы отправляете заказ «На доработку», комментарий обязателен — кратко и по делу (что нужно исправить пользователю).</p>
+      `.trim(),
+      helpTemplatesTitle: "2. Управление шаблонами",
+      helpTemplatesText: `
+<p><strong>Вкладка «Шаблоны»</strong><br />
+Здесь создаются и редактируются текстовые шаблоны писем. Каждый шаблон может содержать:
+— Шапку (кому, от кого, паспорт, адрес и т.д.).<br />
+— Заголовок письма.<br />
+— Основной текст.</p>
+
+<p><strong>Переменные ({{key}})</strong><br />
+Чтобы в тексте подставлялись данные из формы пользователя, используйте переменные в фигурных скобках, например: <code>{{fullName}}</code>, <code>{{address}}</code>, <code>{{passportSeries}}</code>.<br />
+Список доступных переменных задаётся в справочнике (кнопка «+» над полями). Нажмите на плашку — переменная вставится в то поле, которое сейчас в фокусе.</p>
+
+<p><strong>Как работает форма пользователя</strong><br />
+Форма автоматически строится по списку переменных, найденных в шаблоне. Если в тексте есть только <code>{{fullName}}</code> и <code>{{ukName}}</code>, у пользователя будет только два поля: ФИО и кому обращение. Лишних полей не будет.</p>
+
+<p><strong>Создание нового шаблона</strong><br />
+1) Нажмите «Создать шаблон». <br />
+2) Заполните название и описание — они отображаются только в админке. <br />
+3) Отметьте чекбокс «Активен», чтобы шаблон попал в список на стороне пользователя. <br />
+4) Заполните шапку, заголовок и тело письма, используя переменные. <br />
+5) Нажмите «Сохранить шаблон».</p>
+
+<p><strong>Сортировка</strong><br />
+Поле «Сортировка» определяет порядок показа шаблонов. Меньшее число — выше в списке.</p>
+      `.trim(),
+      helpVariablesTitle: "3. Справочник переменных",
+      helpVariablesText: `
+<p><strong>Что такое переменная</strong><br />
+Переменная — это ключ, который используется и в шаблоне, и в форме пользователя. Например, <code>{{accountNumber}}</code> — номер лицевого счёта.</p>
+
+<p><strong>Добавление переменной</strong><br />
+1) В редакторе шаблона нажмите круглую кнопку «+» в блоке «Переменные (справочник из БД)». <br />
+2) Введите ключ (латиницей, без пробелов), например: <code>ooo</code>. <br />
+3) Укажите подпись на русском и английском. <br />
+4) Сохраните — переменная появится в списке и станет доступна во всех шаблонах.</p>
+
+<p><strong>Удаление переменной</strong><br />
+Нажмите крестик на плашке. Переменная удалится из справочника, но в уже сохранённых шаблонах текст <code>{{key}}</code> останется как обычная строка — при необходимости отредактируйте такие шаблоны вручную.</p>
+      `.trim(),
+      helpFooter: "Изменения в шаблонах и переменных применяются сразу после сохранения. Перед тем как запускать шаблон в прод, проверьте превью письма и PDF на тестовом пользователе.",
       empty: "Нет заказов.",
       tabOrders: "Заказы",
       tabTemplates: "Шаблоны",
@@ -1277,6 +1338,67 @@ const I18N = {
     admin: {
       title: "Admin Panel",
       subtitle: "All user orders. Change status: ready (can download) or revision (with comment).",
+      helpTitle: "Admin guide",
+      helpOrdersTitle: "1. Managing orders",
+      helpOrdersText: `
+<p><strong>Orders list</strong><br />
+In the “Orders” tab you see all user documents. Each order shows a short preview, user data and current status.</p>
+
+<p><strong>Viewing an order</strong><br />
+Click “View” to open the full letter and user data. From here you can download the PDF (in production — attach it to your reply).</p>
+
+<p><strong>Statuses</strong><br />
+— <strong>In progress</strong>: initial status after payment.<br />
+— <strong>Ready</strong>: document is checked, user can download it.<br />
+— <strong>Revision</strong>: there are comments, user must fix the text.</p>
+
+<p><strong>How to change status</strong><br />
+— “Complete (can download)”: sets status to Ready, clears the comment.<br />
+— “Send for revision”: requires a comment, then sets status to Revision.</p>
+
+<p><strong>Comment requirements</strong><br />
+When sending to revision, always leave a short, clear comment describing what the user should fix.</p>
+      `.trim(),
+      helpTemplatesTitle: "2. Managing templates",
+      helpTemplatesText: `
+<p><strong>Templates tab</strong><br />
+Here you create and edit letter templates. Each template has:<br />
+— Header (To/From/passport/address/etc).<br />
+— Title.<br />
+— Body text.</p>
+
+<p><strong>Variables ({{key}})</strong><br />
+Use variables to insert user data into the text, e.g. <code>{{fullName}}</code>, <code>{{address}}</code>, <code>{{passportSeries}}</code>.<br />
+The available variables come from the dictionary (the “+” button above the fields). Click a pill to insert {{key}} into the currently focused field.</p>
+
+<p><strong>User form behaviour</strong><br />
+The user form is built from variables found in the template. If the text only contains <code>{{fullName}}</code> and <code>{{ukName}}</code>, the form will only show these two fields.</p>
+
+<p><strong>Creating a template</strong><br />
+1) Click “Create template”.<br />
+2) Fill in name and description (internal, for admins).<br />
+3) Check “Active” so the template is available to users.<br />
+4) Fill header, title and body using variables.<br />
+5) Save the template.</p>
+
+<p><strong>Sort order</strong><br />
+“Sort order” defines the display order. Smaller number = higher in the list.</p>
+      `.trim(),
+      helpVariablesTitle: "3. Variables dictionary",
+      helpVariablesText: `
+<p><strong>What is a variable</strong><br />
+A variable is a key used both in templates and in the user form, e.g. <code>{{accountNumber}}</code>.</p>
+
+<p><strong>Adding</strong><br />
+1) In the template editor click the round “+” in the variables block.<br />
+2) Enter key (latin, no spaces), e.g. <code>ooo</code>.<br />
+3) Add RU/EN labels.<br />
+4) Save — the variable appears in the list and becomes available to all templates.</p>
+
+<p><strong>Deleting</strong><br />
+Click the cross on a pill. The variable is removed from the dictionary; in existing templates, the {{key}} text remains and can be edited manually.</p>
+      `.trim(),
+      helpFooter: "Template and variable changes apply immediately after saving. Always test preview and PDF on a test user before going live.",
       empty: "No orders.",
       tabOrders: "Orders",
       tabTemplates: "Templates",
@@ -1363,7 +1485,7 @@ function clearConstructorForm() {
   state.constructorForm = {
     templateId: firstId,
     fields: {},
-    services: { coldWater: true, hotWater: false, wastewater: false, electricity: false, gas: false, heating: false, solidWaste: false },
+    services: { coldWater: false, hotWater: false, wastewater: false, electricity: false, gas: false, heating: false, solidWaste: false },
   };
   const tpl = templates.find((t) => String(t.id) === firstId) || templates[0];
   if (tpl) ensureConstructorFieldsForTemplate(tpl);
@@ -2326,7 +2448,7 @@ function loadOrderIntoConstructor(order) {
   state.constructorForm = {
     templateId: d.templateId || state.constructorForm.templateId || '',
     fields,
-    services: d.services || { coldWater: true, hotWater: false, wastewater: false, electricity: false, gas: false, heating: false, solidWaste: false },
+    services: d.services || { coldWater: false, hotWater: false, wastewater: false, electricity: false, gas: false, heating: false, solidWaste: false },
   };
   state.withExpert = !!d.withExpert;
   const templates = Array.isArray(state.templates) && state.templates.length ? state.templates : getBuiltInTemplates();
@@ -2349,7 +2471,7 @@ function loadDraftIntoConstructor(draft) {
   state.constructorForm = {
     templateId: d.templateId || state.constructorForm.templateId || '',
     fields,
-    services: d.services || { coldWater: true, hotWater: false, wastewater: false, electricity: false, gas: false, heating: false, solidWaste: false },
+    services: d.services || { coldWater: false, hotWater: false, wastewater: false, electricity: false, gas: false, heating: false, solidWaste: false },
   };
   state.withExpert = !!d.withExpert;
   const templates = Array.isArray(state.templates) && state.templates.length ? state.templates : getBuiltInTemplates();
@@ -2923,8 +3045,13 @@ async function renderAdmin() {
     <div class="landing">
       <section id="admin" class="section hero-section section-visible">
         <div class="neo-card section-shell">
-          <h2 class="section-title">${t.title}</h2>
-          <p class="section-subtitle">${t.subtitle}</p>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+            <div>
+              <h2 class="section-title">${t.title}</h2>
+              <p class="section-subtitle">${t.subtitle}</p>
+            </div>
+            <button type="button" id="admin-help-btn" class="secondary-btn" style="border-radius:999px;width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;font-weight:600" aria-label="${state.lang === 'ru' ? 'Инструкция' : 'Help'}">!</button>
+          </div>
           <a href="#" class="secondary-btn" style="margin-bottom:20px;display:inline-block" onclick="window.location.hash=''; render(); return false;">&larr; ${state.lang === 'ru' ? 'На главную' : 'Back'}</a>
           <div class="profile-tabs profile-tabs-split" style="margin-bottom:12px">
             <button class="profile-tab-btn ${tab === 'orders' ? 'active' : ''}" data-tab="orders">${t.tabOrders}</button>
@@ -2951,6 +3078,42 @@ async function renderAdmin() {
       renderAdmin();
     });
   });
+
+  // help modal
+  const helpBtn = document.getElementById('admin-help-btn');
+  if (helpBtn) {
+    helpBtn.addEventListener('click', () => {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+      const box = document.createElement('div');
+      box.className = 'neo-card';
+      box.style.cssText = 'max-width:820px;width:100%;max-height:90vh;overflow:auto;';
+      box.innerHTML = `
+        <h3 class="preview-title" style="margin-top:0">${t.helpTitle}</h3>
+        <div class="field">
+          <div class="stacked-label">${t.helpOrdersTitle}</div>
+          <div class="small" style="line-height:1.6">${t.helpOrdersText}</div>
+        </div>
+        <div class="field">
+          <div class="stacked-label">${t.helpTemplatesTitle}</div>
+          <div class="small" style="line-height:1.6">${t.helpTemplatesText}</div>
+        </div>
+        <div class="field">
+          <div class="stacked-label">${t.helpVariablesTitle}</div>
+          <div class="small" style="line-height:1.6">${t.helpVariablesText}</div>
+        </div>
+        <p class="small muted-text" style="margin-top:8px">${t.helpFooter}</p>
+        <div class="btn-row" style="gap:8px;flex-wrap:wrap;margin-top:16px;">
+          <button type="button" class="primary-btn" id="admin-help-close">${state.lang === 'ru' ? 'Понятно' : 'Got it'}</button>
+        </div>
+      `;
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+      const close = () => overlay.remove();
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+      box.querySelector('#admin-help-close').addEventListener('click', close);
+    });
+  }
 
   if (tab === 'templates') {
     const itemsEl = document.getElementById('admin-templates-items');
