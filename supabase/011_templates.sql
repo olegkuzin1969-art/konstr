@@ -17,11 +17,11 @@ alter table templates enable row level security;
 create policy "Allow all for now" on templates
   for all using (true) with check (true);
 
--- Seed default template (402-FZ)
+-- Seed default template (Конструктор официальных обращений)
 insert into templates (name, description, content, is_active, sort_order)
 values (
-  '402‑ФЗ — документы-основания начислений',
-  'Запрос документов-оснований начислений платы за ЖКУ (ФЗ № 402‑ФЗ).',
+  'Конструктор официальных обращений — документы-основания начислений',
+  'Запрос документов-оснований начислений платы за ЖКУ (оформленный через Конструктор официальных обращений).',
   jsonb_build_object(
     'version', 1,
     'title', jsonb_build_object(

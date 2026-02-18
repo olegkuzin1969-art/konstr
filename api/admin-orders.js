@@ -255,6 +255,52 @@ module.exports = async function handler(req, res) {
       return res.status(405).end();
     }
 
+    // ===== Pricing (таблица: pricing, одна строка с ценами) =====
+    if (resource === 'pricing') {
+      if (req.method === 'GET') {
+        const { data: row, error } = await supabase
+          .from('pricing')
+          .select('id, base_price_rub, expert_price_rub, updated_at')
+          .eq('id', 1)
+          .single();
+        if (error && error.code !== 'PGRST116') {
+          return res.status(500).json({ error: error.message });
+        }
+        if (!row) {
+          const { data: created, error: insertError } = await supabase
+            .from('pricing')
+            .insert({ id: 1, base_price_rub: 700, expert_price_rub: 2200 })
+            .select('id, base_price_rub, expert_price_rub, updated_at')
+            .single();
+          if (insertError) return res.status(500).json({ error: insertError.message });
+          return res.status(200).json({ pricing: created });
+        }
+        return res.status(200).json({ pricing: row });
+      }
+
+      if (req.method === 'PUT') {
+        const p = body.pricing || body;
+        const base = Number(p.base_price_rub);
+        const expert = Number(p.expert_price_rub);
+        if (!Number.isFinite(base) || base <= 0 || !Number.isInteger(base)) {
+          return res.status(400).json({ error: 'Некорректная цена базового тарифа' });
+        }
+        if (!Number.isFinite(expert) || expert <= 0 || !Number.isInteger(expert)) {
+          return res.status(400).json({ error: 'Некорректная цена тарифа с экспертом' });
+        }
+        const { data: updated, error } = await supabase
+          .from('pricing')
+          .update({ base_price_rub: base, expert_price_rub: expert, updated_at: new Date().toISOString() })
+          .eq('id', 1)
+          .select('id, base_price_rub, expert_price_rub, updated_at')
+          .single();
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(200).json({ pricing: updated });
+      }
+
+      return res.status(405).end();
+    }
+
     if (req.method === 'GET') {
       const { data: orders, error } = await supabase
         .from('orders')

@@ -64,6 +64,10 @@ const state = {
   isLoading: false,
   profileTab: "drafts",
   adminTab: "orders",
+  pricing: {
+    base_price_rub: 700,
+    expert_price_rub: 2200,
+  },
   editingDraftId: null,
   editingOrderId: null,
   isAdmin: false,
@@ -87,6 +91,25 @@ async function fetchConfig() {
 
 function setTemplateVariables(list) {
   state.templateVariables = Array.isArray(list) ? list : [];
+}
+
+function setPricing(pricing) {
+  if (pricing && typeof pricing === 'object') {
+    const base = Number(pricing.base_price_rub);
+    const expert = Number(pricing.expert_price_rub);
+    if (Number.isFinite(base) && base > 0 && Number.isInteger(base) &&
+        Number.isFinite(expert) && expert > 0 && Number.isInteger(expert)) {
+      state.pricing = {
+        base_price_rub: base,
+        expert_price_rub: expert,
+      };
+      return;
+    }
+  }
+  state.pricing = {
+    base_price_rub: 700,
+    expert_price_rub: 2200,
+  };
 }
 
 function getTemplateVariables(tpl) {
@@ -238,9 +261,11 @@ async function initAppConfig() {
     const cfg = await fetchConfig();
     setTemplates(cfg?.templates);
     setTemplateVariables(cfg?.variables);
+    setPricing(cfg?.pricing);
   } catch {
     setTemplates([]);
     setTemplateVariables([]);
+    setPricing(null);
   }
 }
 
@@ -750,11 +775,11 @@ const I18N = {
       privacy: "Политика конфиденциальности",
     },
     hero: {
-      badge: "Сервис «Конструкт» — запросы в УК и другие документы",
+      badge: "Сервис «Конструктор официальных обращений» — запросы в УК и другие документы",
       title: "Соберите официальный запрос в УК<br />как из конструктора",
       subtitle:
         "Пошаговый конструктор помогает сформировать юридически корректное обращение: вы отвечаете на простые вопросы — сервис собирает текст и готовит PDF.",
-      templateNote: "Сайт поддерживает не только шаблон по 402‑ФЗ, но и другие типы запросов — шаблон выбирается в форме.",
+      templateNote: "Сайт поддерживает не только шаблон «Конструктор официальных обращений», но и другие типы запросов — шаблон выбирается в форме.",
       pills: [
         "Пошаговый конструктор",
         "Черновик PDF до оплаты",
@@ -763,7 +788,7 @@ const I18N = {
       ctaPrimary: "Заполнить конструктор",
       ctaSecondary: "Посмотреть тарифы",
       tagline:
-        "MVP‑версия: один тип документа — «Запрос в УК по 402‑ФЗ», две опции тарифа и ручная проверка в админ‑панели.",
+        "MVP‑версия: один тип документа — «Конструктор официальных обращений», две опции тарифа и ручная проверка в админ‑панели.",
       howTitle: "Как работает «Конструкт»",
       howSteps: [
         "Вы отвечаете на 5–7 вопросов о себе и своей УК.",
@@ -1135,11 +1160,11 @@ const I18N = {
       privacy: "Privacy policy",
     },
     hero: {
-      badge: "Konstruct — requests to the management company and other documents",
+      badge: "Official requests constructor — requests to the management company and other documents",
       title: "Build an official request<br />to your management company",
       subtitle:
         "A step‑by‑step form helps you create a legally correct request: you answer simple questions — the service assembles the text and prepares a PDF.",
-      templateNote: "The site supports not only the 402‑FZ template but also other request types — choose a template in the form.",
+      templateNote: "The site supports not only the “Official requests constructor” template but also other request types — choose a template in the form.",
       pills: [
         "Step‑by‑step constructor",
         "Draft PDF before payment",
@@ -1148,7 +1173,7 @@ const I18N = {
       ctaPrimary: "Open constructor",
       ctaSecondary: "View pricing",
       tagline:
-        "MVP: one document type — request under 402‑FZ, two pricing options and manual expert review.",
+        "MVP: one document type — “Official requests constructor”, two pricing options and manual expert review.",
       howTitle: "How Konstruct works",
       howSteps: [
         "You answer 5–7 questions about yourself and your management company.",
@@ -1842,7 +1867,7 @@ function downloadOrderPdf(order) {
   document.body.appendChild(overlay);
 
   const name = (f.ukName || 'Zapros').replace(/[^a-zA-Zа-яА-Я0-9]/g, '_').slice(0, 30);
-  const filename = `Zapros_402FZ_${name}_${new Date().toISOString().slice(0, 10)}.pdf`;
+  const filename = `Zapros_Konstructor_${name}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
   function runPdf() {
     requestAnimationFrame(() => {
@@ -2118,7 +2143,7 @@ function renderHome() {
               ${tService.baseBadge}
             </div>
             <h3 class="price-title">${tService.baseTitle}</h3>
-            <div class="price-main">${tService.basePrice}</div>
+            <div class="price-main">${(state.pricing?.base_price_rub || 700).toLocaleString('ru-RU')} ₽</div>
             <ul class="price-list small">
               ${tService.basePoints
                 .map((p) => `<li>${p}</li>`)
@@ -2135,7 +2160,7 @@ function renderHome() {
               ${tService.expertBadge}
             </div>
             <h3 class="price-title">${tService.expertTitle}</h3>
-            <div class="price-main">${tService.expertPrice}</div>
+            <div class="price-main">${(state.pricing?.expert_price_rub || 2200).toLocaleString('ru-RU')} ₽</div>
             <ul class="price-list small">
               ${tService.expertPoints
                 .map((p) => `<li>${p}</li>`)
@@ -2742,9 +2767,9 @@ function openTemplateEditorModal(existing) {
       <div class="stacked-label">${state.lang === 'ru' ? 'Шапка (EN)' : 'Header (EN)'}</div>
       <textarea class="textarea input" id="tpl-header-en" rows="5" placeholder="...">${escapeHtml(headerEn)}</textarea>
     </div>
-    <div class="field">
+      <div class="field">
       <div class="stacked-label">${t.templateTitleRu}</div>
-      <textarea class="textarea input" id="tpl-title-ru" rows="3" placeholder="Например: ЗАПРОС о предоставлении документов (в соответствии с ФЗ № 402-ФЗ)">${escapeHtml(titleRu)}</textarea>
+      <textarea class="textarea input" id="tpl-title-ru" rows="3" placeholder="Например: ЗАПРОС о предоставлении документов (для официального обращения)">${escapeHtml(titleRu)}</textarea>
     </div>
     <div class="field">
       <div class="stacked-label">${t.templateBodyRu}</div>

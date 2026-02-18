@@ -12,6 +12,7 @@ module.exports = async function handler(req, res) {
 
   let templates = [];
   let variables = [];
+  let pricing = null;
   if (SUPABASE_URL && SUPABASE_ANON_KEY) {
     try {
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -47,9 +48,23 @@ module.exports = async function handler(req, res) {
         label_en: v.label_en || '',
         sort_order: v.sort_order ?? 0,
       }));
+
+      const { data: pricingRow } = await supabase
+        .from('pricing')
+        .select('id, base_price_rub, expert_price_rub, updated_at')
+        .eq('id', 1)
+        .single();
+      if (pricingRow) {
+        pricing = {
+          base_price_rub: pricingRow.base_price_rub,
+          expert_price_rub: pricingRow.expert_price_rub,
+          updated_at: pricingRow.updated_at,
+        };
+      }
     } catch {
       templates = [];
       variables = [];
+      pricing = null;
     }
   }
 
@@ -58,5 +73,6 @@ module.exports = async function handler(req, res) {
     supabaseAnonKey: SUPABASE_ANON_KEY,
     templates,
     variables,
+    pricing,
   });
 };

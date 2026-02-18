@@ -65,7 +65,7 @@ alter table templates
   add column if not exists header_ru text not null default '',
   add column if not exists header_en text not null default '';
 
--- Заполняем "шапку" для существующего 402-шаблона, если пусто
+-- Заполняем "шапку" для существующего шаблона, если пусто
 update templates
 set header_ru = 'Кому: {{ukName}}\nОт: {{fullName}}\nПаспорт: серия {{passportSeries}} номер {{passportNumber}}, выдан {{passportIssued}}\nАдрес регистрации: {{address}}\nКонтактный телефон: {{phone}}  Email: {{emailForReply}}',
     header_en = 'To: {{ukName}}\nFrom: {{fullName}}\nPassport: series {{passportSeries}} no. {{passportNumber}}, issued {{passportIssued}}\nAddress: {{address}}\nPhone: {{phone}}  Email: {{emailForReply}}'

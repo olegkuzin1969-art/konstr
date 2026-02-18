@@ -89,11 +89,29 @@ module.exports = async function handler(req, res) {
     const withExpert = !!body.withExpert;
     if (!orderData || typeof orderData !== 'object') return res.status(400).json({ error: 'Некорректные данные заказа' });
 
-    const amountRub = withExpert ? 2200 : 700;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let amountRub = withExpert ? 2200 : 700;
+    try {
+      const { data: pricingRow } = await supabase
+        .from('pricing')
+        .select('base_price_rub, expert_price_rub')
+        .eq('id', 1)
+        .single();
+      if (pricingRow) {
+        const base = Number(pricingRow.base_price_rub);
+        const expert = Number(pricingRow.expert_price_rub);
+        if (Number.isFinite(base) && base > 0 && Number.isInteger(base) &&
+            Number.isFinite(expert) && expert > 0 && Number.isInteger(expert)) {
+          amountRub = withExpert ? expert : base;
+        }
+      }
+    } catch {
+      // fallback to default prices if pricing not available
+    }
+
     const amountKop = amountRub * 100;
     const valueStr = amountRub.toFixed(2);
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data: intent, error: insertError } = await supabase
       .from('payment_intents')
       .insert({
