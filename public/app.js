@@ -83,27 +83,53 @@ async function fetchConfig() {
 }
 
 function getTemplateVariables(tpl) {
-  const list = tpl?.variables;
-  if (Array.isArray(list)) {
-    if (list.length === 0) return [];
-    return list.map((v) => ({
-      key: String(v.key || '').trim() || 'field',
-      label: String(v.label || '').trim() || v.key || 'Поле',
-    })).filter((v) => v.key !== 'field' || v.label !== 'Поле');
+  if (!tpl || !tpl.content) return [];
+  const title = tpl.content.title || {};
+  const body = tpl.content.body || {};
+
+  const chunks = [];
+  ['ru', 'en'].forEach((lng) => {
+    if (title[lng]) chunks.push(String(title[lng]));
+    if (body[lng]) chunks.push(String(body[lng]));
+  });
+  Object.keys(title).forEach((k) => {
+    if (k !== 'ru' && k !== 'en' && title[k]) chunks.push(String(title[k]));
+  });
+  Object.keys(body).forEach((k) => {
+    if (k !== 'ru' && k !== 'en' && body[k]) chunks.push(String(body[k]));
+  });
+
+  const text = chunks.join('\n');
+  const re = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
+  const keysSet = new Set();
+  let m;
+  // Вытащить все {{key}} из шаблона
+  while ((m = re.exec(text))) {
+    if (m[1]) keysSet.add(m[1]);
   }
-  return getDefault402Variables();
-}
 
-function getDefault402Variables() {
-  return PREDEFINED_VARIABLES.slice(0, 12).map((v) => ({
-    key: v.key,
-    label: state.lang === 'ru' ? v.labelRu : v.labelEn,
-  }));
-}
+  const keys = Array.from(keysSet);
+  if (!keys.length) return [];
 
-function getVariableLabel(variableKey, lang) {
-  const v = PREDEFINED_VARIABLES.find((x) => x.key === variableKey);
-  return v ? (lang === 'ru' ? v.labelRu : v.labelEn) : variableKey;
+  const vars = keys.map((key) => {
+    const def = PREDEFINED_VARIABLES.find((v) => v.key === key);
+    return {
+      key,
+      label: def ? (state.lang === 'ru' ? def.labelRu : def.labelEn) : key,
+    };
+  });
+
+  // Сортировка по порядку из PREDEFINED_VARIABLES, остальные — по алфавиту
+  vars.sort((a, b) => {
+    const ia = PREDEFINED_VARIABLES.findIndex((v) => v.key === a.key);
+    const ib = PREDEFINED_VARIABLES.findIndex((v) => v.key === b.key);
+    if (ia === -1 && ib === -1) return a.key.localeCompare(b.key);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+
+  return vars;
 }
 
 function getBuiltInTemplates() {
