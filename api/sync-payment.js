@@ -105,6 +105,15 @@ module.exports = async function handler(req, res) {
       const payment = await yooRes.json().catch(() => ({}));
       if (payment.status !== 'succeeded') continue;
 
+      // Атомарно забираем intent (только если всё ещё pending), чтобы не создать заказ дважды с вебхуком
+      const { data: lockedRows, error: lockErr } = await supabase
+        .from('payment_intents')
+        .update({ status: 'completed' })
+        .eq('id', intent.id)
+        .eq('status', 'pending')
+        .select('id');
+      if (lockErr || !lockedRows || lockedRows.length === 0) continue;
+
       const approved = intent.with_expert ? null : true;
       const { error: orderError } = await supabase.from('orders').insert({
         user_id: intent.user_id,
@@ -114,9 +123,9 @@ module.exports = async function handler(req, res) {
       });
       if (orderError) {
         console.error('sync-payment order insert:', orderError);
+        await supabase.from('payment_intents').update({ status: 'pending' }).eq('id', intent.id);
         continue;
       }
-      await supabase.from('payment_intents').update({ status: 'completed' }).eq('id', intent.id);
       return res.status(200).json({ synced: true });
     }
 

@@ -1502,12 +1502,13 @@ async function applyPaymentReturn() {
   const payment = params.get('payment');
   if (!payment) return;
   const t = I18N[state.lang].constructor;
-  const msg = payment === 'success' ? t.paymentSuccess : t.paymentCancel;
   window.history.replaceState(null, '', window.location.pathname + '#profile');
   window.location.hash = '#profile';
+  let msg = t.paymentCancel;
   try {
     if (payment === 'success') {
-      await syncPaymentApi();
+      const data = await syncPaymentApi();
+      msg = data.synced ? t.paymentSuccess : t.paymentCancel;
     }
   } catch (_) {}
   const orders = await fetchOrders().catch(() => []);
