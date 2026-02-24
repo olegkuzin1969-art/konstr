@@ -65,7 +65,7 @@ module.exports = async function handler(req, res) {
 
       const { data: appearanceRow } = await supabase
         .from('appearance')
-        .select('id, bg_color, bg_elevated_color, bg_gradient_from, bg_gradient_to, accent_color, border_color, updated_at')
+        .select('id, bg_color, bg_elevated_color, bg_gradient_from, bg_gradient_to, accent_color, border_color, header_bg, footer_bg, card_bg, tabs_bg, preview_bg, primary_btn_bg, primary_btn_text, secondary_btn_bg, secondary_btn_text, updated_at')
         .eq('id', 1)
         .single();
       if (appearanceRow) {
@@ -76,6 +76,15 @@ module.exports = async function handler(req, res) {
           bg_gradient_to: appearanceRow.bg_gradient_to,
           accent_color: appearanceRow.accent_color,
           border_color: appearanceRow.border_color,
+          header_bg: appearanceRow.header_bg,
+          footer_bg: appearanceRow.footer_bg,
+          card_bg: appearanceRow.card_bg,
+          tabs_bg: appearanceRow.tabs_bg,
+          preview_bg: appearanceRow.preview_bg,
+          primary_btn_bg: appearanceRow.primary_btn_bg,
+          primary_btn_text: appearanceRow.primary_btn_text,
+          secondary_btn_bg: appearanceRow.secondary_btn_bg,
+          secondary_btn_text: appearanceRow.secondary_btn_text,
           updated_at: appearanceRow.updated_at,
         };
       }

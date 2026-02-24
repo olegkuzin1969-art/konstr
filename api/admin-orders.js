@@ -306,7 +306,7 @@ module.exports = async function handler(req, res) {
       if (req.method === 'GET') {
         const { data: row, error } = await supabase
           .from('appearance')
-          .select('id, bg_color, bg_elevated_color, bg_gradient_from, bg_gradient_to, accent_color, border_color, updated_at')
+          .select('id, bg_color, bg_elevated_color, bg_gradient_from, bg_gradient_to, accent_color, border_color, header_bg, footer_bg, card_bg, tabs_bg, preview_bg, primary_btn_bg, primary_btn_text, secondary_btn_bg, secondary_btn_text, updated_at')
           .eq('id', 1)
           .single();
         if (error && error.code !== 'PGRST116') {
@@ -324,12 +324,21 @@ module.exports = async function handler(req, res) {
           bg_gradient_to: a.bg_gradient_to ? String(a.bg_gradient_to).trim() : null,
           accent_color: a.accent_color ? String(a.accent_color).trim() : null,
           border_color: a.border_color ? String(a.border_color).trim() : null,
+          header_bg: a.header_bg ? String(a.header_bg).trim() : null,
+          footer_bg: a.footer_bg ? String(a.footer_bg).trim() : null,
+          card_bg: a.card_bg ? String(a.card_bg).trim() : null,
+          tabs_bg: a.tabs_bg ? String(a.tabs_bg).trim() : null,
+          preview_bg: a.preview_bg ? String(a.preview_bg).trim() : null,
+          primary_btn_bg: a.primary_btn_bg ? String(a.primary_btn_bg).trim() : null,
+          primary_btn_text: a.primary_btn_text ? String(a.primary_btn_text).trim() : null,
+          secondary_btn_bg: a.secondary_btn_bg ? String(a.secondary_btn_bg).trim() : null,
+          secondary_btn_text: a.secondary_btn_text ? String(a.secondary_btn_text).trim() : null,
           updated_at: new Date().toISOString(),
         };
         const { data: updated, error } = await supabase
           .from('appearance')
           .upsert({ id: 1, ...row })
-          .select('id, bg_color, bg_elevated_color, bg_gradient_from, bg_gradient_to, accent_color, border_color, updated_at')
+          .select('id, bg_color, bg_elevated_color, bg_gradient_from, bg_gradient_to, accent_color, border_color, header_bg, footer_bg, card_bg, tabs_bg, preview_bg, primary_btn_bg, primary_btn_text, secondary_btn_bg, secondary_btn_text, updated_at')
           .single();
         if (error) return res.status(500).json({ error: error.message });
         return res.status(200).json({ appearance: updated });

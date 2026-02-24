@@ -135,6 +135,15 @@ function resetAppearanceToDefaults() {
   root.style.removeProperty('--accent');
   root.style.removeProperty('--accent-soft');
   root.style.removeProperty('--border');
+  root.style.removeProperty('--header-bg');
+  root.style.removeProperty('--footer-bg');
+  root.style.removeProperty('--card-bg');
+  root.style.removeProperty('--tabs-bg');
+  root.style.removeProperty('--preview-bg');
+  root.style.removeProperty('--btn-primary-bg');
+  root.style.removeProperty('--btn-primary-text');
+  root.style.removeProperty('--btn-secondary-bg');
+  root.style.removeProperty('--btn-secondary-text');
   document.body.style.background = '';
 }
 
@@ -154,6 +163,11 @@ function applyAppearance(appearance) {
   if (bg) root.style.setProperty('--bg', bg);
   if (bgElevated) root.style.setProperty('--bg-elevated', bgElevated);
   if (border) root.style.setProperty('--border', border);
+  if (appearance.header_bg) root.style.setProperty('--header-bg', appearance.header_bg);
+  if (appearance.footer_bg) root.style.setProperty('--footer-bg', appearance.footer_bg);
+  if (appearance.card_bg) root.style.setProperty('--card-bg', appearance.card_bg);
+  if (appearance.tabs_bg) root.style.setProperty('--tabs-bg', appearance.tabs_bg);
+  if (appearance.preview_bg) root.style.setProperty('--preview-bg', appearance.preview_bg);
   if (accent) {
     root.style.setProperty('--accent', accent);
     const soft = hexToRgba(accent, 0.12);
@@ -161,6 +175,18 @@ function applyAppearance(appearance) {
   }
   if (gradFrom && gradTo) {
     document.body.style.background = `radial-gradient(circle at top left, ${gradFrom}, ${gradTo} 55%)`;
+  }
+  if (appearance.primary_btn_bg) {
+    root.style.setProperty('--btn-primary-bg', appearance.primary_btn_bg);
+  }
+  if (appearance.primary_btn_text) {
+    root.style.setProperty('--btn-primary-text', appearance.primary_btn_text);
+  }
+  if (appearance.secondary_btn_bg) {
+    root.style.setProperty('--btn-secondary-bg', appearance.secondary_btn_bg);
+  }
+  if (appearance.secondary_btn_text) {
+    root.style.setProperty('--btn-secondary-text', appearance.secondary_btn_text);
   }
 }
 
@@ -173,6 +199,15 @@ function setAppearance(appearance) {
       bg_gradient_to: appearance.bg_gradient_to || null,
       accent_color: appearance.accent_color || null,
       border_color: appearance.border_color || null,
+      header_bg: appearance.header_bg || null,
+      footer_bg: appearance.footer_bg || null,
+      card_bg: appearance.card_bg || null,
+      tabs_bg: appearance.tabs_bg || null,
+      preview_bg: appearance.preview_bg || null,
+      primary_btn_bg: appearance.primary_btn_bg || null,
+      primary_btn_text: appearance.primary_btn_text || null,
+      secondary_btn_bg: appearance.secondary_btn_bg || null,
+      secondary_btn_text: appearance.secondary_btn_text || null,
     };
   } else {
     state.appearance = null;
@@ -3253,6 +3288,14 @@ async function renderAdmin() {
                 <label class="stacked-label" for="theme-bg-elevated">${t.themeBgElevatedLabel}</label>
                 <input type="color" id="theme-bg-elevated" value="${escapeHtml(String((appearance && appearance.bg_elevated_color) || '#ecf2ff'))}" />
               </div>
+              <div class="field" style="margin-bottom:12px">
+                <label class="stacked-label" for="theme-header-bg">Шапка (header)</label>
+                <input type="color" id="theme-header-bg" value="${escapeHtml(String((appearance && appearance.header_bg) || '#ffffff'))}" />
+              </div>
+              <div class="field" style="margin-bottom:12px">
+                <label class="stacked-label" for="theme-footer-bg">Подвал (footer)</label>
+                <input type="color" id="theme-footer-bg" value="${escapeHtml(String((appearance && appearance.footer_bg) || '#f4f7fc'))}" />
+              </div>
               <div class="field" style="margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap">
                 <div style="flex:1;min-width:140px">
                   <label class="stacked-label" for="theme-grad-from">${t.themeGradFromLabel}</label>
@@ -3270,6 +3313,30 @@ async function renderAdmin() {
               <div class="field" style="margin-bottom:16px">
                 <label class="stacked-label" for="theme-border">${t.themeBorderLabel}</label>
                 <input type="color" id="theme-border" value="${escapeHtml(String((appearance && appearance.border_color) || '#cfd8e7'))}" />
+              </div>
+              <div class="field" style="margin-bottom:12px">
+                <label class="stacked-label" for="theme-tabs-bg">Фон вкладок/панелей</label>
+                <input type="color" id="theme-tabs-bg" value="${escapeHtml(String((appearance && appearance.tabs_bg) || '#eef3ff'))}" />
+              </div>
+              <div class="field" style="margin-bottom:12px">
+                <label class="stacked-label" for="theme-preview-bg">Фон предпросмотра письма</label>
+                <input type="color" id="theme-preview-bg" value="${escapeHtml(String((appearance && appearance.preview_bg) || '#f9fafb'))}" />
+              </div>
+              <div class="field" style="margin-bottom:12px">
+                <label class="stacked-label" for="theme-primary-btn-bg">Primary‑кнопка (фон)</label>
+                <input type="color" id="theme-primary-btn-bg" value="${escapeHtml(String((appearance && appearance.primary_btn_bg) || '#8b5cf6'))}" />
+              </div>
+              <div class="field" style="margin-bottom:12px">
+                <label class="stacked-label" for="theme-primary-btn-text">Primary‑кнопка (текст)</label>
+                <input type="color" id="theme-primary-btn-text" value="${escapeHtml(String((appearance && appearance.primary_btn_text) || '#f9fafb'))}" />
+              </div>
+              <div class="field" style="margin-bottom:12px">
+                <label class="stacked-label" for="theme-secondary-btn-bg">Secondary‑кнопка (фон)</label>
+                <input type="color" id="theme-secondary-btn-bg" value="${escapeHtml(String((appearance && appearance.secondary_btn_bg) || '#e4ebf5'))}" />
+              </div>
+              <div class="field" style="margin-bottom:16px">
+                <label class="stacked-label" for="theme-secondary-btn-text">Secondary‑кнопка (текст)</label>
+                <input type="color" id="theme-secondary-btn-text" value="${escapeHtml(String((appearance && appearance.secondary_btn_text) || '#111827'))}" />
               </div>
               <div class="btn-row" style="gap:8px;flex-wrap:wrap">
                 <button type="button" class="primary-btn" id="admin-save-theme">${t.saveTheme}</button>
@@ -3418,6 +3485,14 @@ async function renderAdmin() {
         const gradTo = document.getElementById('theme-grad-to')?.value || '';
         const accent = document.getElementById('theme-accent')?.value || '';
         const border = document.getElementById('theme-border')?.value || '';
+      const headerBg = document.getElementById('theme-header-bg')?.value || '';
+      const footerBg = document.getElementById('theme-footer-bg')?.value || '';
+      const tabsBg = document.getElementById('theme-tabs-bg')?.value || '';
+      const previewBg = document.getElementById('theme-preview-bg')?.value || '';
+      const primaryBtnBg = document.getElementById('theme-primary-btn-bg')?.value || '';
+      const primaryBtnText = document.getElementById('theme-primary-btn-text')?.value || '';
+      const secondaryBtnBg = document.getElementById('theme-secondary-btn-bg')?.value || '';
+      const secondaryBtnText = document.getElementById('theme-secondary-btn-text')?.value || '';
         try {
           const updated = await updateAdminAppearance({
             bg_color: bg,
@@ -3426,6 +3501,14 @@ async function renderAdmin() {
             bg_gradient_to: gradTo,
             accent_color: accent,
             border_color: border,
+          header_bg: headerBg,
+          footer_bg: footerBg,
+          tabs_bg: tabsBg,
+          preview_bg: previewBg,
+          primary_btn_bg: primaryBtnBg,
+          primary_btn_text: primaryBtnText,
+          secondary_btn_bg: secondaryBtnBg,
+          secondary_btn_text: secondaryBtnText,
           });
           setAppearance(updated);
           alert(t.themeSaved);
