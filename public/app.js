@@ -951,6 +951,12 @@ const I18N = {
     footer: {
       offer: "Публичная оферта",
       privacy: "Политика конфиденциальности",
+      linkCode: "Кодекс",
+      linkDeclaration: "Декларация",
+      linkCommunity: "Сообщество",
+      linkCodeUrl: "#",
+      linkDeclarationUrl: "#",
+      linkCommunityUrl: "https://t.me/SDTSamara",
     },
     hero: {
       badge: "Сервис «Конструктор официальных обращений» — официальные обращения и другие документы",
@@ -1370,6 +1376,12 @@ const I18N = {
     footer: {
       offer: "Public offer",
       privacy: "Privacy policy",
+      linkCode: "Code",
+      linkDeclaration: "Declaration",
+      linkCommunity: "Community",
+      linkCodeUrl: "#",
+      linkDeclarationUrl: "#",
+      linkCommunityUrl: "https://t.me/SDTSamara",
     },
     hero: {
       badge: "Official requests constructor — official requests and other documents",
@@ -2317,6 +2329,42 @@ function applyLanguageToShell() {
   if (footerLinks.length >= 2) {
     footerLinks[0].textContent = dict.footer.offer;
     footerLinks[1].textContent = dict.footer.privacy;
+  }
+  const footerCode = document.getElementById("footer-link-code");
+  const footerDeclaration = document.getElementById("footer-link-declaration");
+  const footerCommunity = document.getElementById("footer-link-community");
+  if (footerCode) {
+    footerCode.textContent = dict.footer.linkCode;
+    footerCode.href = dict.footer.linkCodeUrl || "#";
+    if ((dict.footer.linkCodeUrl || "").startsWith("http")) {
+      footerCode.setAttribute("target", "_blank");
+      footerCode.setAttribute("rel", "noopener");
+    } else {
+      footerCode.removeAttribute("target");
+      footerCode.removeAttribute("rel");
+    }
+  }
+  if (footerDeclaration) {
+    footerDeclaration.textContent = dict.footer.linkDeclaration;
+    footerDeclaration.href = dict.footer.linkDeclarationUrl || "#";
+    if ((dict.footer.linkDeclarationUrl || "").startsWith("http")) {
+      footerDeclaration.setAttribute("target", "_blank");
+      footerDeclaration.setAttribute("rel", "noopener");
+    } else {
+      footerDeclaration.removeAttribute("target");
+      footerDeclaration.removeAttribute("rel");
+    }
+  }
+  if (footerCommunity) {
+    footerCommunity.textContent = dict.footer.linkCommunity;
+    footerCommunity.href = dict.footer.linkCommunityUrl || "#";
+    if ((dict.footer.linkCommunityUrl || "").startsWith("http")) {
+      footerCommunity.setAttribute("target", "_blank");
+      footerCommunity.setAttribute("rel", "noopener");
+    } else {
+      footerCommunity.removeAttribute("target");
+      footerCommunity.removeAttribute("rel");
+    }
   }
 
   document.querySelectorAll(".lang-btn").forEach((btn) => {
