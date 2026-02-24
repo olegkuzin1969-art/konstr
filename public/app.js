@@ -1283,8 +1283,8 @@ const I18N = {
       helpTemplatesTitle: "2. Управление шаблонами",
       helpTemplatesText: `
 <p><strong>Вкладка «Шаблоны»</strong><br />
-Здесь создаются и редактируются текстовые шаблоны писем. Каждый шаблон может содержать:
-— Шапку (кому, от кого, паспорт, адрес и т.д.).<br />
+Здесь создаются и редактируются текстовые шаблоны писем. Каждый шаблон может содержать:<br />
+— Шапку (кому, от кого, паспорт, адрес и т.д.) — необязательно: если оставить пустой, в документе шапка не выводится.<br />
 — Заголовок письма.<br />
 — Основной текст.</p>
 
@@ -1319,7 +1319,49 @@ const I18N = {
 <p><strong>Удаление переменной</strong><br />
 Нажмите крестик на плашке. Переменная удалится из справочника, но в уже сохранённых шаблонах текст <code>{{key}}</code> останется как обычная строка — при необходимости отредактируйте такие шаблоны вручную.</p>
       `.trim(),
-      helpFooter: "Изменения в шаблонах и переменных применяются сразу после сохранения. Перед тем как запускать шаблон в прод, проверьте превью письма и PDF на тестовом пользователе.",
+      helpPricingTitle: "4. Цена (тарифы)",
+      helpPricingText: `
+<p><strong>Вкладка «Цена»</strong><br />
+Здесь задаются два тарифа, которые видят пользователи на главной и в конструкторе.</p>
+
+<p><strong>Базовый тариф (₽)</strong><br />
+Стоимость заказа без проверки экспертом. Пользователь получает готовый документ сразу после оплаты.</p>
+
+<p><strong>Тариф с экспертом (₽)</strong><br />
+Стоимость заказа с ручной проверкой юристом. После оплаты заказ уходит в статус «В работе», админ проверяет и переводит в «Готов» или «На доработку».</p>
+
+<p>Укажите суммы в рублях (целые числа), нажмите «Сохранить цены». Изменения сразу отображаются на сайте.</p>
+      `.trim(),
+      helpAppearanceTitle: "5. Оформление сайта",
+      helpAppearanceText: `
+<p><strong>Вкладка «Оформление»</strong><br />
+Настройка цветов и стиля сайта: фон, градиент, акцент, шапка, подвал, кнопки и т.д.</p>
+
+<p><strong>Основные поля</strong><br />
+— Основной фон, поднятый фон — карточки и блоки.<br />
+— Шапка / подвал — цвет верхней и нижней панели.<br />
+— Градиент (цвет 1 и 2) — фон страницы.<br />
+— Акцентный цвет — ссылки, активные элементы.<br />
+— Цвет границ — рамки полей и карточек.<br />
+— Фон вкладок, фон предпросмотра письма.<br />
+— Primary- и Secondary-кнопки — фон и цвет текста.</p>
+
+<p>«Сохранить оформление» — применить изменения. «Сбросить по умолчанию» — вернуть стандартную палитру.</p>
+      `.trim(),
+      helpTextsTitle: "6. Тексты сайта",
+      helpTextsText: `
+<p><strong>Вкладка «Текст»</strong><br />
+Редактирование всех текстов интерфейса (главная, конструктор, контакты, подвал, сообщения после оплаты и т.д.) на русском и английском.</p>
+
+<p><strong>Как пользоваться</strong><br />
+В таблице отображаются ключи (например, <code>hero.title</code>, <code>footer.linkCodeUrl</code>). В колонках RU и EN — текущие значения. Измените текст в нужной ячейке и нажмите «Сохранить тексты». Изменения применяются ко всем пользователям.</p>
+
+<p><strong>Ссылки в подвале</strong><br />
+Ключи <code>footer.linkCodeUrl</code>, <code>footer.linkDeclarationUrl</code>, <code>footer.linkCommunityUrl</code> — URL для кнопок Кодекс, Декларация, Сообщество. Для внутренних страниц укажите <code>#legal-codex</code>, <code>#legal-declaration</code>; для внешних — полный URL (например, https://t.me/SDTSamara).</p>
+
+<p>«Сбросить все изменения» — вернуть тексты к значениям из кода (не из БД).</p>
+      `.trim(),
+      helpFooter: "Изменения в заказах, шаблонах, переменных, ценах, оформлении и текстах применяются после сохранения. Перед выкладкой в прод проверьте превью письма и PDF на тестовом пользователе.",
       empty: "Нет заказов.",
       tabOrders: "Заказы",
       tabTemplates: "Шаблоны",
@@ -1718,7 +1760,7 @@ When sending to revision, always leave a short, clear comment describing what th
       helpTemplatesText: `
 <p><strong>Templates tab</strong><br />
 Here you create and edit letter templates. Each template has:<br />
-— Header (To/From/passport/address/etc).<br />
+— Header (To/From/passport/address/etc) — optional: if left empty, no header is shown in the document.<br />
 — Title.<br />
 — Body text.</p>
 
@@ -1753,7 +1795,49 @@ A variable is a key used both in templates and in the user form, e.g. <code>{{ac
 <p><strong>Deleting</strong><br />
 Click the cross on a pill. The variable is removed from the dictionary; in existing templates, the {{key}} text remains and can be edited manually.</p>
       `.trim(),
-      helpFooter: "Template and variable changes apply immediately after saving. Always test preview and PDF on a test user before going live.",
+      helpPricingTitle: "4. Pricing (tariffs)",
+      helpPricingText: `
+<p><strong>Pricing tab</strong><br />
+Set the two tariffs shown to users on the home page and in the constructor.</p>
+
+<p><strong>Base tariff (₽)</strong><br />
+Price without expert review. The user gets the document right after payment.</p>
+
+<p><strong>Expert tariff (₽)</strong><br />
+Price with manual legal review. After payment the order goes to “In progress”; admin reviews and sets “Ready” or “Revision”.</p>
+
+<p>Enter amounts in rubles (whole numbers) and click “Save prices”. Changes appear on the site immediately.</p>
+      `.trim(),
+      helpAppearanceTitle: "5. Site appearance",
+      helpAppearanceText: `
+<p><strong>Appearance tab</strong><br />
+Configure site colors and style: background, gradient, accent, header, footer, buttons, etc.</p>
+
+<p><strong>Main fields</strong><br />
+— Main / elevated background — cards and blocks.<br />
+— Header / footer — top and bottom panel colors.<br />
+— Gradient (color 1 & 2) — page background.<br />
+— Accent color — links and active elements.<br />
+— Border color — input and card borders.<br />
+— Tabs background, letter preview background.<br />
+— Primary and Secondary buttons — background and text color.</p>
+
+<p>“Save appearance” applies changes. “Reset to default” restores the standard palette.</p>
+      `.trim(),
+      helpTextsTitle: "6. Site texts",
+      helpTextsText: `
+<p><strong>Text tab</strong><br />
+Edit all interface texts (home, constructor, contacts, footer, post-payment messages, etc.) in Russian and English.</p>
+
+<p><strong>How to use</strong><br />
+The table lists keys (e.g. <code>hero.title</code>, <code>footer.linkCodeUrl</code>). RU and EN columns show current values. Edit a cell and click “Save texts”. Changes apply to all users.</p>
+
+<p><strong>Footer links</strong><br />
+Keys <code>footer.linkCodeUrl</code>, <code>footer.linkDeclarationUrl</code>, <code>footer.linkCommunityUrl</code> are the URLs for Codex, Declaration, Community. For in-site pages use <code>#legal-codex</code>, <code>#legal-declaration</code>; for external links use the full URL (e.g. https://t.me/SDTSamara).</p>
+
+<p>“Reset all changes” restores texts to code defaults (not from DB).</p>
+      `.trim(),
+      helpFooter: "Changes to orders, templates, variables, pricing, appearance and texts apply after saving. Always test letter preview and PDF on a test user before going live.",
       empty: "No orders.",
       tabOrders: "Orders",
       tabTemplates: "Templates",
@@ -3647,6 +3731,18 @@ async function renderAdmin() {
         <div class="field">
           <div class="stacked-label">${t.helpVariablesTitle}</div>
           <div class="small" style="line-height:1.6">${t.helpVariablesText}</div>
+        </div>
+        <div class="field">
+          <div class="stacked-label">${t.helpPricingTitle}</div>
+          <div class="small" style="line-height:1.6">${t.helpPricingText}</div>
+        </div>
+        <div class="field">
+          <div class="stacked-label">${t.helpAppearanceTitle}</div>
+          <div class="small" style="line-height:1.6">${t.helpAppearanceText}</div>
+        </div>
+        <div class="field">
+          <div class="stacked-label">${t.helpTextsTitle}</div>
+          <div class="small" style="line-height:1.6">${t.helpTextsText}</div>
         </div>
         <p class="small muted-text" style="margin-top:8px">${t.helpFooter}</p>
         <div class="btn-row" style="gap:8px;flex-wrap:wrap;margin-top:16px;">
