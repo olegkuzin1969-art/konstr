@@ -1963,25 +1963,12 @@ function getLetterPreviewFromData(f) {
   const titleRaw = (tpl?.content?.title && (tpl.content.title[lang] || tpl.content.title[ru ? 'ru' : 'en'] || tpl.content.title.ru || tpl.content.title.en)) || '';
   const bodyRaw = (tpl?.content?.body && (tpl.content.body[lang] || tpl.content.body[ru ? 'ru' : 'en'] || tpl.content.body.ru || tpl.content.body.en)) || '';
   const title = fillPlaceholders(titleRaw, vars);
-
-  const fallbackHeader = (() => {
-    const ukName = vars.ukName ?? '___________';
-    const fullName = vars.fullName ?? '___________';
-    const passportSeries = vars.passportSeries ?? '____';
-    const passportNumber = vars.passportNumber ?? '______';
-    const passportIssued = vars.passportIssued ?? '___________';
-    const address = vars.address ?? '___________';
-    const phone = vars.phone ?? '___________';
-    const emailForReply = vars.emailForReply ?? '___________';
-    return ru
-      ? `Кому: ${ukName}\nОт: ${fullName}\nПаспорт: серия ${passportSeries} номер ${passportNumber}, выдан ${passportIssued}\nАдрес регистрации: ${address}\nКонтактный телефон: ${phone}  Email: ${emailForReply}`
-      : `To: ${ukName}\nFrom: ${fullName}\nPassport: series ${passportSeries} no. ${passportNumber}, issued ${passportIssued}\nAddress: ${address}\nPhone: ${phone}  Email: ${emailForReply}`;
-  })();
-  const header = headerRaw ? fillPlaceholders(headerRaw, vars) : fallbackHeader;
-
+  const header = (headerRaw && headerRaw.trim()) ? fillPlaceholders(headerRaw.trim(), vars) : '';
   const body = fillPlaceholders(bodyRaw, vars);
 
-  return `${header}\n\n\n${title}\n\n\n${body}`.trim();
+  const parts = [title, body];
+  if (header) parts.unshift(header);
+  return parts.join('\n\n\n').trim();
 }
 
 function getLetterPreview() {
@@ -2034,21 +2021,8 @@ function buildPdfDocumentHtml(f, ru) {
   const titleText = fillPlaceholders(titleRaw, vars);
   const bodyText = fillPlaceholders(bodyRaw, vars);
 
-  const fallbackHeaderText = (() => {
-    const ukName = vars.ukName ?? '___________';
-    const fullName = vars.fullName ?? '___________';
-    const passportSeries = vars.passportSeries ?? '____';
-    const passportNumber = vars.passportNumber ?? '______';
-    const passportIssued = vars.passportIssued ?? '___________';
-    const address = vars.address ?? '___________';
-    const phone = vars.phone ?? '___________';
-    const emailForReply = vars.emailForReply ?? '___________';
-    return ru
-      ? `Кому: ${ukName}\nОт: ${fullName}\nПаспорт: серия ${passportSeries} номер ${passportNumber}, выдан ${passportIssued}\nАдрес регистрации: ${address}\nКонтактный телефон: ${phone}  Email: ${emailForReply}`
-      : `To: ${ukName}\nFrom: ${fullName}\nPassport: series ${passportSeries} no. ${passportNumber}, issued ${passportIssued}\nAddress: ${address}\nPhone: ${phone}  Email: ${emailForReply}`;
-  })();
-  const headerText = headerRaw ? fillPlaceholders(headerRaw, vars) : fallbackHeaderText;
-  const headerBlock = `<p style="margin:0;white-space:pre-wrap;line-height:1.5;">${escapeHtml(headerText)}</p>`;
+  const headerText = (headerRaw && headerRaw.trim()) ? fillPlaceholders(headerRaw.trim(), vars) : '';
+  const headerBlock = headerText ? `<p style="margin:0;white-space:pre-wrap;line-height:1.5;">${escapeHtml(headerText)}</p>` : '';
 
   function textToHtml(text) {
     const src = String(text || '').replace(/\r\n/g, '\n').trim();
@@ -2080,7 +2054,9 @@ function buildPdfDocumentHtml(f, ru) {
     return html;
   }
 
-  const headerHtml = `<div style="font-size:10pt; line-height:1.5; margin-bottom:24px; text-align:left;">${headerBlock}</div>`;
+  const headerHtml = headerBlock
+    ? `<div style="font-size:10pt; line-height:1.5; margin-bottom:24px; text-align:left;">${headerBlock}</div>`
+    : '';
   const titleHtml = `<div style="font-size:11pt; font-weight:bold; margin-bottom:24px; line-height:1.4; text-align:center;">${escapeHtml(titleText).replace(/\n/g, '<br>')}</div>`;
   const bodyHtml = `<div style="font-size:10pt; text-align:left;">${textToHtml(bodyText)}</div>`;
   return headerHtml + titleHtml + bodyHtml;
