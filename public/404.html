@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Страница не найдена — Конструкт</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      .notfound-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: calc(100vh - 140px);
+      }
+      .notfound-card {
+        text-align: center;
+      }
+      .notfound-code {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        font-size: 92px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        margin-bottom: 12px;
+      }
+      .notfound-digit-4 {
+        color: var(--accent);
+        text-shadow: 4px 4px 10px rgba(139, 92, 246, 0.45);
+      }
+      .notfound-digit-0 {
+        background: radial-gradient(circle at 30% 20%, #ffffff, #f3f4ff 40%, #e0e7ff 80%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        text-shadow: 0 0 18px rgba(255, 255, 255, 0.5);
+      }
+      .notfound-text-main {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .notfound-text-sub {
+        font-size: 14px;
+        color: var(--text-muted);
+        max-width: 420px;
+        margin: 0 auto 24px;
+      }
+      .notfound-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+        justify-content: center;
+      }
+      .notfound-actions a {
+        text-decoration: none;
+      }
+      @media (min-width: 640px) {
+        .notfound-code {
+          font-size: 112px;
+        }
+      }
+    </style>
+  </head>
+  <body id="tg-body">
+    <header class="header">
+      <div class="container header-inner">
+        <div class="header-left">
+          <a href="/" class="logo">Конструкт</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="container main">
+      <div class="notfound-wrapper">
+        <div class="neo-card notfound-card">
+          <div class="notfound-code">
+            <span class="notfound-digit-4">4</span>
+            <span class="notfound-digit-0">0</span>
+            <span class="notfound-digit-4">4</span>
+          </div>
+          <div class="notfound-text-main">Страница не найдена</div>
+          <p class="notfound-text-sub">
+            Кажется, вы попали не туда. Вернитесь на главную страницу или откройте конструктор, чтобы создать официальное обращение.
+          </p>
+          <div class="notfound-actions">
+            <a href="/" class="primary-btn">На главную</a>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <span>© 2026 Конструкт</span>
+        <div class="footer-links">
+          <a href="/#legal-offer" class="link-like">Публичная оферта</a>
+          <a href="/#legal-privacy" class="link-like">Политика конфиденциальности</a>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        var w = window.Telegram && window.Telegram.WebApp;
+        if (w) {
+          document.documentElement.classList.add('tg-miniapp');
+          document.body.classList.add('tg-miniapp');
+          w.ready();
+          w.expand();
+          if (w.requestFullscreen) w.requestFullscreen();
+        }
+      })();
+    </script>
+  </body>
+  </html>
+
