@@ -345,9 +345,9 @@ html {
   box-shadow: inset 2px 2px 4px rgba(163, 177, 198, 0.4);
 }
 
-/* Админка: три вкладки в одну строку */
+/* Админка: вкладки в одну строку (4 вкладки) */
 #admin .profile-tabs-split {
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
 }
 
 .profile-tabs-split .profile-tab-btn {

@@ -301,6 +301,49 @@ module.exports = async function handler(req, res) {
       return res.status(405).end();
     }
 
+    // ===== Appearance (таблица: appearance, тема/цвета сайта) =====
+    if (resource === 'appearance') {
+      if (req.method === 'GET') {
+        const { data: row, error } = await supabase
+          .from('appearance')
+          .select('id, bg_color, bg_elevated_color, bg_gradient_from, bg_gradient_to, accent_color, border_color, updated_at')
+          .eq('id', 1)
+          .single();
+        if (error && error.code !== 'PGRST116') {
+          return res.status(500).json({ error: error.message });
+        }
+        return res.status(200).json({ appearance: row || null });
+      }
+
+      if (req.method === 'PUT') {
+        const a = body.appearance || body;
+        const row = {
+          bg_color: a.bg_color ? String(a.bg_color).trim() : null,
+          bg_elevated_color: a.bg_elevated_color ? String(a.bg_elevated_color).trim() : null,
+          bg_gradient_from: a.bg_gradient_from ? String(a.bg_gradient_from).trim() : null,
+          bg_gradient_to: a.bg_gradient_to ? String(a.bg_gradient_to).trim() : null,
+          accent_color: a.accent_color ? String(a.accent_color).trim() : null,
+          border_color: a.border_color ? String(a.border_color).trim() : null,
+          updated_at: new Date().toISOString(),
+        };
+        const { data: updated, error } = await supabase
+          .from('appearance')
+          .upsert({ id: 1, ...row })
+          .select('id, bg_color, bg_elevated_color, bg_gradient_from, bg_gradient_to, accent_color, border_color, updated_at')
+          .single();
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(200).json({ appearance: updated });
+      }
+
+      if (req.method === 'DELETE') {
+        const { error } = await supabase.from('appearance').delete().eq('id', 1);
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(200).json({ ok: true });
+      }
+
+      return res.status(405).end();
+    }
+
     if (req.method === 'GET') {
       const { data: orders, error } = await supabase
         .from('orders')

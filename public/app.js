@@ -68,6 +68,7 @@ const state = {
     base_price_rub: 700,
     expert_price_rub: 2200,
   },
+  appearance: null,
   editingDraftId: null,
   editingOrderId: null,
   isAdmin: false,
@@ -110,6 +111,73 @@ function setPricing(pricing) {
     base_price_rub: 700,
     expert_price_rub: 2200,
   };
+}
+
+function hexToRgba(hex, alpha) {
+  if (!hex) return '';
+  let h = hex.trim();
+  if (h.startsWith('#')) h = h.slice(1);
+  if (h.length === 3) {
+    h = h.split('').map((c) => c + c).join('');
+  }
+  if (h.length !== 6) return '';
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) return '';
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function resetAppearanceToDefaults() {
+  const root = document.documentElement;
+  root.style.removeProperty('--bg');
+  root.style.removeProperty('--bg-elevated');
+  root.style.removeProperty('--accent');
+  root.style.removeProperty('--accent-soft');
+  root.style.removeProperty('--border');
+  document.body.style.background = '';
+}
+
+function applyAppearance(appearance) {
+  const root = document.documentElement;
+  if (!appearance) {
+    resetAppearanceToDefaults();
+    return;
+  }
+  const bg = appearance.bg_color;
+  const bgElevated = appearance.bg_elevated_color;
+  const accent = appearance.accent_color;
+  const border = appearance.border_color;
+  const gradFrom = appearance.bg_gradient_from;
+  const gradTo = appearance.bg_gradient_to;
+
+  if (bg) root.style.setProperty('--bg', bg);
+  if (bgElevated) root.style.setProperty('--bg-elevated', bgElevated);
+  if (border) root.style.setProperty('--border', border);
+  if (accent) {
+    root.style.setProperty('--accent', accent);
+    const soft = hexToRgba(accent, 0.12);
+    if (soft) root.style.setProperty('--accent-soft', soft);
+  }
+  if (gradFrom && gradTo) {
+    document.body.style.background = `radial-gradient(circle at top left, ${gradFrom}, ${gradTo} 55%)`;
+  }
+}
+
+function setAppearance(appearance) {
+  if (appearance && typeof appearance === 'object') {
+    state.appearance = {
+      bg_color: appearance.bg_color || null,
+      bg_elevated_color: appearance.bg_elevated_color || null,
+      bg_gradient_from: appearance.bg_gradient_from || null,
+      bg_gradient_to: appearance.bg_gradient_to || null,
+      accent_color: appearance.accent_color || null,
+      border_color: appearance.border_color || null,
+    };
+  } else {
+    state.appearance = null;
+  }
+  applyAppearance(state.appearance);
 }
 
 function getTemplateVariables(tpl) {
@@ -262,10 +330,12 @@ async function initAppConfig() {
     setTemplates(cfg?.templates);
     setTemplateVariables(cfg?.variables);
     setPricing(cfg?.pricing);
+    setAppearance(cfg?.appearance);
   } catch {
     setTemplates([]);
     setTemplateVariables([]);
     setPricing(null);
+    setAppearance(null);
   }
 }
 
@@ -596,6 +666,20 @@ async function fetchAdminPricing() {
 async function updateAdminPricing(pricing) {
   const data = await adminOrdersApi('PUT', { resource: 'pricing', pricing });
   return data.pricing;
+}
+
+async function fetchAdminAppearance() {
+  const data = await adminOrdersApi('GET', { resource: 'appearance' });
+  return data.appearance || null;
+}
+
+async function updateAdminAppearance(appearance) {
+  const data = await adminOrdersApi('PUT', { resource: 'appearance', appearance });
+  return data.appearance;
+}
+
+async function resetAdminAppearance() {
+  await adminOrdersApi('DELETE', { resource: 'appearance' });
 }
 
 async function checkAdminStatus() {
@@ -1097,6 +1181,8 @@ const I18N = {
       tabOrders: "Заказы",
       tabTemplates: "Шаблоны",
       tabPricing: "Цена",
+      tabAppearance: "Оформление",
+      tabPricing: "Цена",
       priceBaseLabel: "Базовый тариф (₽)",
       priceExpertLabel: "Тариф с экспертом (₽)",
       savePrices: "Сохранить цены",
@@ -1126,6 +1212,22 @@ const I18N = {
       templateBodyEn: "Текст (EN)",
       templateCancel: "Отмена",
       templateSave: "Сохранить шаблон",
+      priceBaseLabel: "Базовый тариф (₽)",
+      priceExpertLabel: "Тариф с экспертом (₽)",
+      savePrices: "Сохранить цены",
+      pricesSaved: "Цены сохранены",
+      pricesError: "Ошибка сохранения цен",
+      appearanceTitle: "Оформление сайта",
+      themeBgLabel: "Основной фон (карточки)",
+      themeBgElevatedLabel: "Поднятый фон (блоки)",
+      themeGradFromLabel: "Градиент: цвет 1",
+      themeGradToLabel: "Градиент: цвет 2",
+      themeAccentLabel: "Акцентный цвет",
+      themeBorderLabel: "Цвет границ",
+      saveTheme: "Сохранить оформление",
+      resetTheme: "Сбросить по умолчанию",
+      themeSaved: "Оформление сохранено",
+      themeReset: "Оформление сброшено к стандартному",
     },
     profile: {
       title: "Профиль",
@@ -1444,6 +1546,8 @@ Click the cross on a pill. The variable is removed from the dictionary; in exist
       tabOrders: "Orders",
       tabTemplates: "Templates",
       tabPricing: "Pricing",
+      tabAppearance: "Appearance",
+      tabPricing: "Pricing",
       priceBaseLabel: "Base tariff (₽)",
       priceExpertLabel: "Expert tariff (₽)",
       savePrices: "Save prices",
@@ -1473,6 +1577,22 @@ Click the cross on a pill. The variable is removed from the dictionary; in exist
       templateBodyEn: "Body (EN)",
       templateCancel: "Cancel",
       templateSave: "Save template",
+      priceBaseLabel: "Base tariff (₽)",
+      priceExpertLabel: "Expert tariff (₽)",
+      savePrices: "Save prices",
+      pricesSaved: "Prices saved",
+      pricesError: "Error saving prices",
+      appearanceTitle: "Site appearance",
+      themeBgLabel: "Base background (cards)",
+      themeBgElevatedLabel: "Elevated background (blocks)",
+      themeGradFromLabel: "Gradient: color 1",
+      themeGradToLabel: "Gradient: color 2",
+      themeAccentLabel: "Accent color",
+      themeBorderLabel: "Border color",
+      saveTheme: "Save appearance",
+      resetTheme: "Reset to default",
+      themeSaved: "Appearance saved",
+      themeReset: "Appearance reset to default",
     },
     profile: {
       title: "Profile",
@@ -3034,6 +3154,7 @@ async function renderAdmin() {
   let orders = state.adminOrders;
   let templates = state.adminTemplates;
   let pricing = state.adminPricing;
+  let appearance = state.adminAppearance;
   let loading = false;
   try {
     loading = true;
@@ -3043,6 +3164,9 @@ async function renderAdmin() {
     } else if (tab === 'pricing') {
       pricing = await fetchAdminPricing();
       state.adminPricing = pricing;
+    } else if (tab === 'appearance') {
+      appearance = await fetchAdminAppearance();
+      state.adminAppearance = appearance;
     } else {
       orders = await fetchAdminOrders();
       state.adminOrders = orders;
@@ -3096,6 +3220,7 @@ async function renderAdmin() {
             <button class="profile-tab-btn ${tab === 'orders' ? 'active' : ''}" data-tab="orders">${t.tabOrders}</button>
             <button class="profile-tab-btn ${tab === 'templates' ? 'active' : ''}" data-tab="templates">${t.tabTemplates}</button>
             <button class="profile-tab-btn ${tab === 'pricing' ? 'active' : ''}" data-tab="pricing">${t.tabPricing}</button>
+            <button class="profile-tab-btn ${tab === 'appearance' ? 'active' : ''}" data-tab="appearance">${t.tabAppearance}</button>
           </div>
           <div id="admin-orders-list" style="${tab === 'orders' ? '' : 'display:none'}"></div>
           <div id="admin-templates-list" style="${tab === 'templates' ? '' : 'display:none'}">
@@ -3115,6 +3240,41 @@ async function renderAdmin() {
                 <input type="number" min="1" step="1" class="input" id="admin-price-expert" value="${escapeHtml(String((pricing && pricing.expert_price_rub) || 2200))}" />
               </div>
               <button type="button" class="primary-btn" id="admin-save-prices">${t.savePrices}</button>
+            </div>
+          </div>
+          <div id="admin-appearance-list" style="${tab === 'appearance' ? '' : 'display:none'}">
+            <div class="neo-card" style="max-width:520px;padding:20px">
+              <h3 class="section-title" style="font-size:18px;margin-top:0;margin-bottom:16px">${t.appearanceTitle}</h3>
+              <div class="field" style="margin-bottom:12px">
+                <label class="stacked-label" for="theme-bg">${t.themeBgLabel}</label>
+                <input type="color" id="theme-bg" value="${escapeHtml(String((appearance && appearance.bg_color) || '#e4ebf5'))}" />
+              </div>
+              <div class="field" style="margin-bottom:12px">
+                <label class="stacked-label" for="theme-bg-elevated">${t.themeBgElevatedLabel}</label>
+                <input type="color" id="theme-bg-elevated" value="${escapeHtml(String((appearance && appearance.bg_elevated_color) || '#ecf2ff'))}" />
+              </div>
+              <div class="field" style="margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap">
+                <div style="flex:1;min-width:140px">
+                  <label class="stacked-label" for="theme-grad-from">${t.themeGradFromLabel}</label>
+                  <input type="color" id="theme-grad-from" value="${escapeHtml(String((appearance && appearance.bg_gradient_from) || '#f5f7fb'))}" />
+                </div>
+                <div style="flex:1;min-width:140px">
+                  <label class="stacked-label" for="theme-grad-to">${t.themeGradToLabel}</label>
+                  <input type="color" id="theme-grad-to" value="${escapeHtml(String((appearance && appearance.bg_gradient_to) || '#dfe7f3'))}" />
+                </div>
+              </div>
+              <div class="field" style="margin-bottom:12px">
+                <label class="stacked-label" for="theme-accent">${t.themeAccentLabel}</label>
+                <input type="color" id="theme-accent" value="${escapeHtml(String((appearance && appearance.accent_color) || '#8b5cf6'))}" />
+              </div>
+              <div class="field" style="margin-bottom:16px">
+                <label class="stacked-label" for="theme-border">${t.themeBorderLabel}</label>
+                <input type="color" id="theme-border" value="${escapeHtml(String((appearance && appearance.border_color) || '#cfd8e7'))}" />
+              </div>
+              <div class="btn-row" style="gap:8px;flex-wrap:wrap">
+                <button type="button" class="primary-btn" id="admin-save-theme">${t.saveTheme}</button>
+                <button type="button" class="secondary-btn" id="admin-reset-theme">${t.resetTheme}</button>
+              </div>
             </div>
           </div>
         </div>
@@ -3234,13 +3394,57 @@ async function renderAdmin() {
           return;
         }
         try {
-          await updateAdminPricing({ base_price_rub: base, expert_price_rub: expert });
-          setPricing({ base_price_rub: base, expert_price_rub: expert });
+          const updated = await updateAdminPricing({ base_price_rub: base, expert_price_rub: expert });
+          setPricing(updated);
           await initAppConfig();
           alert(t.pricesSaved);
           renderAdmin();
         } catch (e) {
           alert(t.pricesError + ': ' + (e?.message || ''));
+        }
+      });
+    }
+    return;
+  }
+
+  if (tab === 'appearance') {
+    const saveBtn = document.getElementById('admin-save-theme');
+    const resetBtn = document.getElementById('admin-reset-theme');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async () => {
+        const bg = document.getElementById('theme-bg')?.value || '';
+        const bgElevated = document.getElementById('theme-bg-elevated')?.value || '';
+        const gradFrom = document.getElementById('theme-grad-from')?.value || '';
+        const gradTo = document.getElementById('theme-grad-to')?.value || '';
+        const accent = document.getElementById('theme-accent')?.value || '';
+        const border = document.getElementById('theme-border')?.value || '';
+        try {
+          const updated = await updateAdminAppearance({
+            bg_color: bg,
+            bg_elevated_color: bgElevated,
+            bg_gradient_from: gradFrom,
+            bg_gradient_to: gradTo,
+            accent_color: accent,
+            border_color: border,
+          });
+          setAppearance(updated);
+          alert(t.themeSaved);
+          renderAdmin();
+        } catch (e) {
+          alert((t.pricesError || 'Ошибка') + ': ' + (e?.message || ''));
+        }
+      });
+    }
+    if (resetBtn) {
+      resetBtn.addEventListener('click', async () => {
+        if (!confirm(state.lang === 'ru' ? 'Сбросить оформление к стандартному?' : 'Reset appearance to default?')) return;
+        try {
+          await resetAdminAppearance();
+          setAppearance(null);
+          alert(t.themeReset);
+          renderAdmin();
+        } catch (e) {
+          alert((t.pricesError || 'Ошибка') + ': ' + (e?.message || ''));
         }
       });
     }

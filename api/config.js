@@ -13,6 +13,7 @@ module.exports = async function handler(req, res) {
   let templates = [];
   let variables = [];
   let pricing = null;
+  let appearance = null;
   if (SUPABASE_URL && SUPABASE_ANON_KEY) {
     try {
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -61,10 +62,28 @@ module.exports = async function handler(req, res) {
           updated_at: pricingRow.updated_at,
         };
       }
+
+      const { data: appearanceRow } = await supabase
+        .from('appearance')
+        .select('id, bg_color, bg_elevated_color, bg_gradient_from, bg_gradient_to, accent_color, border_color, updated_at')
+        .eq('id', 1)
+        .single();
+      if (appearanceRow) {
+        appearance = {
+          bg_color: appearanceRow.bg_color,
+          bg_elevated_color: appearanceRow.bg_elevated_color,
+          bg_gradient_from: appearanceRow.bg_gradient_from,
+          bg_gradient_to: appearanceRow.bg_gradient_to,
+          accent_color: appearanceRow.accent_color,
+          border_color: appearanceRow.border_color,
+          updated_at: appearanceRow.updated_at,
+        };
+      }
     } catch {
       templates = [];
       variables = [];
       pricing = null;
+      appearance = null;
     }
   }
 
@@ -74,5 +93,6 @@ module.exports = async function handler(req, res) {
     templates,
     variables,
     pricing,
+    appearance,
   });
 };
