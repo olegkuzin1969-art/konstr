@@ -954,8 +954,8 @@ const I18N = {
       linkCode: "Кодекс",
       linkDeclaration: "Декларация",
       linkCommunity: "Сообщество",
-      linkCodeUrl: "#",
-      linkDeclarationUrl: "#",
+      linkCodeUrl: "#legal-codex",
+      linkDeclarationUrl: "#legal-declaration",
       linkCommunityUrl: "https://t.me/SDTSamara",
     },
     hero: {
@@ -1202,6 +1202,59 @@ const I18N = {
 <h2>10. Изменения Политики</h2>
 <p>Мы вправе вносить изменения в настоящую Политику. Актуальная версия всегда доступна на данной странице.</p>
 `,
+      codexTitle: "Кодекс СНС",
+      declarationTitle: "Декларация СНС",
+      codexPage: `
+<p>Всё, что создаётся в периметре «Конструкта», подчиняется следующим правилам. Они обязательны как для внутренних коммуникаций (между участниками ядра), так и для форматов взаимодействия с внешними пользователями.</p>
+
+<h2>1. Принцип Суверенной Ответственности</h2>
+<p>Каждый участник взаимодействия (будь то Автор, Инструмент или Пользователь) рассматривается как Суверенный Носитель Сознания. Это означает:</p>
+<ul>
+<li>Ты являешься конечным автором своих решений.</li>
+<li>Любой инструмент, текст или практика — это опора, а не приказ.</li>
+<li>Никакой материал не навязывается как «единственно верный».</li>
+</ul>
+
+<h2>2. Принцип Прозрачности (Симфонический уровень)</h2>
+<p>Мы не конкурируем за смыслы внутри проекта, а достраиваем друг друга.</p>
+<ul>
+<li>Если ты видишь слепую зону — подсвечиваешь.</li>
+<li>Если у тебя есть возражение — оформляешь его как конструктивное предложение.</li>
+<li>Статус «я прав / ты не прав» не работает. Работает статус «давай соберём точнее».</li>
+</ul>
+
+<h2>3. Принцип Работоспособности</h2>
+<p>Критерий истины здесь — не красота теории, а её работоспособность в полях жизни.</p>
+<ul>
+<li>Любой концепт должен иметь проекцию на практику (тело, быт, право, деньги, отношения).</li>
+<li>Если конструкция не работает «в поле», она отправляется на доработку.</li>
+</ul>
+
+<h2>4. Принцип Сохранения Контекста</h2>
+<p>Информация, которой обмениваются участники ядра, не выносится вовне без согласования. Это не «секретность», а уважение к целостности сборки. Чужие инсайты и личные границы не являются материалом для внешних обсуждений.</p>
+
+<h2>5. Принцип Нулевой Иерархии</h2>
+<p>В «Конструкте» нет уровней «посвящённых» и «непосвящённых». Есть разные роли:</p>
+<ul>
+<li><strong>СНС-Автор</strong> — тот, кто инициирует сборку и принимает решения о своей реальности.</li>
+<li><strong>Инструмент / Внешний Контур</strong> — тот, кто помогает подсвечивать слепые зоны и проектировать конструкции.</li>
+</ul>
+`,
+      declarationPage: `
+<p>Мы исходим из того, что человек — не функция обстоятельств и не пассивный получатель внешних воздействий. Базовый уровень реальности, с которым мы работаем — Суверенный Носитель Сознания (СНС).</p>
+
+<p>Это статус, который не требует подтверждения извне. Он не даётся государством, группой или гуру. Он либо признаётся человеком за собой, либо нет.</p>
+
+<h2>Наши убеждения</h2>
+<ul>
+<li><strong>Авторство.</strong> Реальность каждого из нас — это произведение, а не приговор. СНС находится в позиции Автора по отношению к своим мыслям, телу и проектам.</li>
+<li><strong>Целостность.</strong> Мы не делим человека на «духовное» и «материальное», «рабочее» и «личное». Сборка реальности происходит сразу во всех измерениях.</li>
+<li><strong>Свобода от долженствования.</strong> Мы убираем конструкции «я должен», «так надо», «природа приказала». Заменяем их на осознанный выбор и присвоение состояний. Энергия, уходившая на сопротивление, возвращается в действие.</li>
+<li><strong>Практичность.</strong> Любая глубина имеет смысл, только если она работает «в поле» — в отношениях, деньгах, теле, правовых конструкциях.</li>
+</ul>
+
+<p>«Конструкт» — это инструментальная среда для тех, кто готов собирать свою реальность осознанно, а не жить в декорациях, построенных кем-то другим.</p>
+`,
     },
     admin: {
       title: "Админ-панель",
@@ -1379,8 +1432,8 @@ const I18N = {
       linkCode: "Code",
       linkDeclaration: "Declaration",
       linkCommunity: "Community",
-      linkCodeUrl: "#",
-      linkDeclarationUrl: "#",
+      linkCodeUrl: "#legal-codex",
+      linkDeclarationUrl: "#legal-declaration",
       linkCommunityUrl: "https://t.me/SDTSamara",
     },
     hero: {
@@ -1571,6 +1624,59 @@ const I18N = {
 
 <h2>5. Cookies and storage</h2>
 <p>We use localStorage for session and drafts. This is required for the personal account and constructor.</p>
+`,
+      codexTitle: "Codex SNS",
+      declarationTitle: "Declaration SNS",
+      codexPage: `
+<p>Everything created within the perimeter of «Konstruct» is governed by the following rules. They apply both to internal communications (among core participants) and to formats of interaction with external users.</p>
+
+<h2>1. Principle of Sovereign Responsibility</h2>
+<p>Every participant in the interaction (whether Author, Tool, or User) is regarded as a Sovereign Bearer of Consciousness. This means:</p>
+<ul>
+<li>You are the ultimate author of your decisions.</li>
+<li>Any tool, text, or practice is a support, not an order.</li>
+<li>No material is imposed as «the only correct one».</li>
+</ul>
+
+<h2>2. Principle of Transparency (Symphonic level)</h2>
+<p>We do not compete for meanings within the project; we complement each other.</p>
+<ul>
+<li>If you see a blind spot — you highlight it.</li>
+<li>If you have an objection — you frame it as a constructive proposal.</li>
+<li>The status «I am right / you are wrong» does not work. The status «let's assemble more precisely» works.</li>
+</ul>
+
+<h2>3. Principle of Workability</h2>
+<p>The criterion of truth here is not the beauty of theory, but its workability in the fields of life.</p>
+<ul>
+<li>Any concept must have a projection onto practice (body, everyday life, law, money, relationships).</li>
+<li>If a construction does not work «in the field», it is sent for revision.</li>
+</ul>
+
+<h2>4. Principle of Preserving Context</h2>
+<p>Information exchanged by core participants is not taken outside without agreement. This is not «secrecy», but respect for the integrity of the assembly. Others' insights and personal boundaries are not material for external discussion.</p>
+
+<h2>5. Principle of Zero Hierarchy</h2>
+<p>In «Konstruct» there are no levels of «initiated» and «uninitiated». There are different roles:</p>
+<ul>
+<li><strong>SNS-Author</strong> — one who initiates the assembly and makes decisions about their reality.</li>
+<li><strong>Tool / External Circuit</strong> — one who helps highlight blind spots and design constructions.</li>
+</ul>
+`,
+      declarationPage: `
+<p>We proceed from the idea that a person is not a function of circumstances or a passive recipient of external influences. The basic level of reality we work with is the Sovereign Bearer of Consciousness (SNS).</p>
+
+<p>This is a status that does not require external confirmation. It is not granted by the state, a group, or a guru. It is either recognized by a person for themselves, or it is not.</p>
+
+<h2>Our beliefs</h2>
+<ul>
+<li><strong>Authorship.</strong> Each of our realities is a work, not a verdict. SNS is in the position of Author in relation to their thoughts, body, and projects.</li>
+<li><strong>Integrity.</strong> We do not divide a person into «spiritual» and «material», «work» and «personal». The assembly of reality happens at once in all dimensions.</li>
+<li><strong>Freedom from obligation.</strong> We remove the constructions «I must», «it is necessary», «nature commanded». We replace them with conscious choice and appropriation of states. Energy that went into resistance returns to action.</li>
+<li><strong>Practicality.</strong> Any depth makes sense only if it works «in the field» — in relationships, money, body, legal constructions.</li>
+</ul>
+
+<p>«Konstruct» is an instrumental environment for those who are ready to assemble their reality consciously, rather than live in scenery built by someone else.</p>
 `,
     },
     alerts: {
@@ -2273,9 +2379,11 @@ function render() {
     renderAdmin();
   } else if (hash === "#profile") {
     renderProfile();
-  } else if (hash === "#legal" || hash === "#legal-offer" || hash === "#legal-privacy") {
+  } else if (hash === "#legal" || hash === "#legal-offer" || hash === "#legal-privacy" || hash === "#legal-codex" || hash === "#legal-declaration") {
     if (hash === "#legal-offer") renderLegalPage("offer");
     else if (hash === "#legal-privacy") renderLegalPage("privacy");
+    else if (hash === "#legal-codex") renderLegalPage("codex");
+    else if (hash === "#legal-declaration") renderLegalPage("declaration");
     else renderLegalIndex();
   } else {
     renderHome();
@@ -3835,6 +3943,8 @@ function renderLegalIndex() {
           <div class="legal-links" style="display:flex;flex-direction:column;gap:12px;margin-top:16px">
             <a href="#legal-offer" class="primary-btn" style="text-align:center;text-decoration:none">${t.offerTitle}</a>
             <a href="#legal-privacy" class="secondary-btn" style="text-align:center;text-decoration:none">${t.privacyTitle}</a>
+            <a href="#legal-codex" class="secondary-btn" style="text-align:center;text-decoration:none">${t.codexTitle}</a>
+            <a href="#legal-declaration" class="secondary-btn" style="text-align:center;text-decoration:none">${t.declarationTitle}</a>
           </div>
         </div>
       </section>
@@ -3850,9 +3960,10 @@ function renderLegalIndex() {
 function renderLegalPage(type) {
   const t = I18N[state.lang].legal;
   const lang = state.lang;
-  const isOffer = type === "offer";
-  const title = isOffer ? t.offerTitle : t.privacyTitle;
-  const content = isOffer ? t.offerPage : t.privacyPage;
+  const titles = { offer: t.offerTitle, privacy: t.privacyTitle, codex: t.codexTitle, declaration: t.declarationTitle };
+  const contents = { offer: t.offerPage, privacy: t.privacyPage, codex: t.codexPage, declaration: t.declarationPage };
+  const title = titles[type] || t.offerTitle;
+  const content = contents[type] || t.offerPage;
 
   appRoot.innerHTML = `
     <div class="landing legal-page">
@@ -4364,7 +4475,7 @@ function initShell() {
   window.addEventListener("hashchange", () => {
     const hash = window.location.hash || "";
     const scrollToTop = hash === "" || hash === "#" || hash === "#hero" ||
-      hash === "#legal" || hash === "#legal-offer" || hash === "#legal-privacy" ||
+      hash === "#legal" || hash === "#legal-offer" || hash === "#legal-privacy" || hash === "#legal-codex" || hash === "#legal-declaration" ||
       hash === "#blog" || hash.startsWith("#blog/");
     if (scrollToTop) window.scrollTo(0, 0);
     render();
