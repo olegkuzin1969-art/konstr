@@ -14,6 +14,7 @@ module.exports = async function handler(req, res) {
   let variables = [];
   let pricing = null;
   let appearance = null;
+  let texts = [];
   if (SUPABASE_URL && SUPABASE_ANON_KEY) {
     try {
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -88,11 +89,19 @@ module.exports = async function handler(req, res) {
           updated_at: appearanceRow.updated_at,
         };
       }
+
+      const { data: textsRows } = await supabase
+        .from('texts')
+        .select('key, lang, value')
+        .order('key', { ascending: true })
+        .order('lang', { ascending: true });
+      texts = textsRows || [];
     } catch {
       templates = [];
       variables = [];
       pricing = null;
       appearance = null;
+      texts = [];
     }
   }
 
@@ -103,5 +112,6 @@ module.exports = async function handler(req, res) {
     variables,
     pricing,
     appearance,
+    texts,
   });
 };

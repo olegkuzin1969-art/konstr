@@ -353,6 +353,50 @@ module.exports = async function handler(req, res) {
       return res.status(405).end();
     }
 
+    // ===== Texts (таблица: texts, произвольные тексты сайта) =====
+    if (resource === 'texts') {
+      if (req.method === 'GET') {
+        const { data, error } = await supabase
+          .from('texts')
+          .select('id, key, lang, value, updated_at')
+          .order('key', { ascending: true })
+          .order('lang', { ascending: true });
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(200).json({ texts: data || [] });
+      }
+
+      if (req.method === 'PUT') {
+        const items = Array.isArray(body.texts) ? body.texts : [];
+        if (!items.length) return res.status(400).json({ error: 'texts array is required' });
+        const rows = items.map((t) => ({
+          key: String(t.key || '').trim(),
+          lang: String(t.lang || '').trim(),
+          value: String(t.value || ''),
+          updated_at: new Date().toISOString(),
+        })).filter((t) => t.key && t.lang);
+        if (!rows.length) return res.status(400).json({ error: 'no valid rows' });
+        const { data, error } = await supabase
+          .from('texts')
+          .upsert(rows, { onConflict: 'key,lang' })
+          .select('id, key, lang, value, updated_at');
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(200).json({ texts: data || [] });
+      }
+
+      if (req.method === 'DELETE') {
+        const key = body.key || query.key;
+        const lang = body.lang || query.lang;
+        let q = supabase.from('texts').delete();
+        if (key) q = q.eq('key', key);
+        if (lang) q = q.eq('lang', lang);
+        const { error } = await q;
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(200).json({ ok: true });
+      }
+
+      return res.status(405).end();
+    }
+
     if (req.method === 'GET') {
       const { data: orders, error } = await supabase
         .from('orders')

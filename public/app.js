@@ -69,6 +69,8 @@ const state = {
     expert_price_rub: 2200,
   },
   appearance: null,
+  texts: [],
+  adminTexts: [],
   editingDraftId: null,
   editingOrderId: null,
   isAdmin: false,
@@ -213,6 +215,37 @@ function setAppearance(appearance) {
     state.appearance = null;
   }
   applyAppearance(state.appearance);
+}
+
+function setTextByPath(lang, path, value) {
+  if (!lang || !path) return;
+  const parts = path.split('.');
+  let obj = I18N[lang];
+  for (let i = 0; i < parts.length - 1; i++) {
+    const p = parts[i];
+    if (!obj || typeof obj !== 'object') return;
+    if (!(p in obj)) return;
+    obj = obj[p];
+  }
+  const last = parts[parts.length - 1];
+  if (obj && Object.prototype.hasOwnProperty.call(obj, last)) {
+    obj[last] = value;
+  }
+}
+
+function applyTextOverrides(texts) {
+  if (!Array.isArray(texts)) return;
+  texts.forEach((t) => {
+    const lang = (t.lang || '').toLowerCase();
+    const key = String(t.key || '').trim();
+    if (!key || (lang !== 'ru' && lang !== 'en')) return;
+    setTextByPath(lang, key, String(t.value || ''));
+  });
+}
+
+function setTexts(list) {
+  state.texts = Array.isArray(list) ? list : [];
+  applyTextOverrides(state.texts);
 }
 
 function getTemplateVariables(tpl) {
@@ -366,11 +399,13 @@ async function initAppConfig() {
     setTemplateVariables(cfg?.variables);
     setPricing(cfg?.pricing);
     setAppearance(cfg?.appearance);
+    setTexts(cfg?.texts || []);
   } catch {
     setTemplates([]);
     setTemplateVariables([]);
     setPricing(null);
     setAppearance(null);
+    setTexts([]);
   }
 }
 
@@ -715,6 +750,20 @@ async function updateAdminAppearance(appearance) {
 
 async function resetAdminAppearance() {
   await adminOrdersApi('DELETE', { resource: 'appearance' });
+}
+
+async function fetchAdminTexts() {
+  const data = await adminOrdersApi('GET', { resource: 'texts' });
+  return data.texts || [];
+}
+
+async function saveAdminTexts(texts) {
+  const data = await adminOrdersApi('PUT', { resource: 'texts', texts });
+  return data.texts || [];
+}
+
+async function resetAdminTexts() {
+  await adminOrdersApi('DELETE', { resource: 'texts' });
 }
 
 async function checkAdminStatus() {
@@ -1217,6 +1266,7 @@ const I18N = {
       tabTemplates: "Шаблоны",
       tabPricing: "Цена",
       tabAppearance: "Оформление",
+      tabTexts: "Текст",
       tabPricing: "Цена",
       priceBaseLabel: "Базовый тариф (₽)",
       priceExpertLabel: "Тариф с экспертом (₽)",
@@ -1263,6 +1313,15 @@ const I18N = {
       resetTheme: "Сбросить по умолчанию",
       themeSaved: "Оформление сохранено",
       themeReset: "Оформление сброшено к стандартному",
+      textsTitle: "Тексты сайта (кроме админки)",
+      textsHint: "Изменения применяются ко всем пользователям. Ключ — системное имя текста (секция.поле).",
+      textsKey: "Ключ",
+      textsRu: "Текст (RU)",
+      textsEn: "Текст (EN)",
+      saveTexts: "Сохранить тексты",
+      resetTexts: "Сбросить все изменения",
+      textsSaved: "Тексты сохранены",
+      textsReset: "Все тексты сброшены к исходным",
     },
     profile: {
       title: "Профиль",
@@ -1582,6 +1641,7 @@ Click the cross on a pill. The variable is removed from the dictionary; in exist
       tabTemplates: "Templates",
       tabPricing: "Pricing",
       tabAppearance: "Appearance",
+      tabTexts: "Text",
       tabPricing: "Pricing",
       priceBaseLabel: "Base tariff (₽)",
       priceExpertLabel: "Expert tariff (₽)",
@@ -1628,6 +1688,15 @@ Click the cross on a pill. The variable is removed from the dictionary; in exist
       resetTheme: "Reset to default",
       themeSaved: "Appearance saved",
       themeReset: "Appearance reset to default",
+      textsTitle: "Site texts (excluding admin)",
+      textsHint: "Changes apply to all users. Key is the internal text identifier (section.field).",
+      textsKey: "Key",
+      textsRu: "Text (RU)",
+      textsEn: "Text (EN)",
+      saveTexts: "Save texts",
+      resetTexts: "Reset all changes",
+      textsSaved: "Texts saved",
+      textsReset: "Texts reset to defaults",
     },
     profile: {
       title: "Profile",
@@ -1654,6 +1723,9 @@ Click the cross on a pill. The variable is removed from the dictionary; in exist
     },
   },
 };
+
+// Базовая копия для генерации ключей текста (без перезаписи)
+const I18N_BASE = JSON.parse(JSON.stringify(I18N));
 
 // ========== UI HELPERS ==========
 
@@ -3190,6 +3262,7 @@ async function renderAdmin() {
   let templates = state.adminTemplates;
   let pricing = state.adminPricing;
   let appearance = state.adminAppearance;
+  let texts = state.adminTexts;
   let loading = false;
   try {
     loading = true;
@@ -3202,6 +3275,9 @@ async function renderAdmin() {
     } else if (tab === 'appearance') {
       appearance = await fetchAdminAppearance();
       state.adminAppearance = appearance;
+    } else if (tab === 'texts') {
+      texts = await fetchAdminTexts();
+      state.adminTexts = texts;
     } else {
       orders = await fetchAdminOrders();
       state.adminOrders = orders;
@@ -3256,6 +3332,7 @@ async function renderAdmin() {
             <button class="profile-tab-btn ${tab === 'templates' ? 'active' : ''}" data-tab="templates">${t.tabTemplates}</button>
             <button class="profile-tab-btn ${tab === 'pricing' ? 'active' : ''}" data-tab="pricing">${t.tabPricing}</button>
             <button class="profile-tab-btn ${tab === 'appearance' ? 'active' : ''}" data-tab="appearance">${t.tabAppearance}</button>
+            <button class="profile-tab-btn ${tab === 'texts' ? 'active' : ''}" data-tab="texts">${t.tabTexts}</button>
           </div>
           <div id="admin-orders-list" style="${tab === 'orders' ? '' : 'display:none'}"></div>
           <div id="admin-templates-list" style="${tab === 'templates' ? '' : 'display:none'}">
@@ -3341,6 +3418,63 @@ async function renderAdmin() {
               <div class="btn-row" style="gap:8px;flex-wrap:wrap">
                 <button type="button" class="primary-btn" id="admin-save-theme">${t.saveTheme}</button>
                 <button type="button" class="secondary-btn" id="admin-reset-theme">${t.resetTheme}</button>
+              </div>
+            </div>
+          </div>
+          <div id="admin-texts-list" style="${tab === 'texts' ? '' : 'display:none'}">
+            <div class="neo-card" style="max-width:100%;padding:20px">
+              <h3 class="section-title" style="font-size:18px;margin-top:0;margin-bottom:8px">${t.textsTitle}</h3>
+              <p class="small muted-text" style="margin-bottom:16px">${t.textsHint}</p>
+              <div class="table-wrapper" style="max-height:60vh;overflow:auto">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th style="width:20%">${t.textsKey}</th>
+                      <th style="width:40%">${t.textsRu}</th>
+                      <th style="width:40%">${t.textsEn}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${
+                      (function() {
+                        const rows = [];
+                        const addRow = (key) => {
+                          const ruOverride = (texts || []).find((x) => x.key === key && x.lang === 'ru');
+                          const enOverride = (texts || []).find((x) => x.key === key && x.lang === 'en');
+                          const ruBase = key.split('.').reduce((acc, p) => (acc && acc[p] !== undefined ? acc[p] : ''), I18N_BASE.ru);
+                          const enBase = key.split('.').reduce((acc, p) => (acc && acc[p] !== undefined ? acc[p] : ''), I18N_BASE.en);
+                          const ruVal = ruOverride ? ruOverride.value : (typeof ruBase === 'string' ? ruBase : '');
+                          const enVal = enOverride ? enOverride.value : (typeof enBase === 'string' ? enBase : '');
+                          rows.push(
+                            `<tr>
+                              <td><code>${escapeHtml(key)}</code></td>
+                              <td><textarea class="textarea input admin-text-ru" data-key="${escapeHtml(key)}" rows="2">${escapeHtml(String(ruVal || ''))}</textarea></td>
+                              <td><textarea class="textarea input admin-text-en" data-key="${escapeHtml(key)}" rows="2">${escapeHtml(String(enVal || ''))}</textarea></td>
+                            </tr>`
+                          );
+                        };
+                        const traverse = (obj, prefix, excludeAdmin) => {
+                          Object.keys(obj || {}).forEach((k) => {
+                            if (excludeAdmin && k === 'admin') return;
+                            const val = obj[k];
+                            const path = prefix ? prefix + '.' + k : k;
+                            if (typeof val === 'string') {
+                              addRow(path);
+                            } else if (val && typeof val === 'object') {
+                              traverse(val, path, false);
+                            }
+                          });
+                        };
+                        traverse(I18N_BASE.ru, '', true);
+                        return rows.join('');
+                      })()
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <div class="btn-row" style="gap:8px;flex-wrap:wrap;margin-top:16px;flex-direction:row;justify-content:flex-start">
+                <button type="button" class="primary-btn" id="admin-save-texts">${t.saveTexts}</button>
+                <button type="button" class="secondary-btn" id="admin-reset-texts">${t.resetTexts}</button>
               </div>
             </div>
           </div>
@@ -3525,6 +3659,51 @@ async function renderAdmin() {
           await resetAdminAppearance();
           setAppearance(null);
           alert(t.themeReset);
+          renderAdmin();
+        } catch (e) {
+          alert((t.pricesError || 'Ошибка') + ': ' + (e?.message || ''));
+        }
+      });
+    }
+    return;
+  }
+
+  if (tab === 'texts') {
+    const saveBtn = document.getElementById('admin-save-texts');
+    const resetBtn = document.getElementById('admin-reset-texts');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async () => {
+        try {
+          const rows = [];
+          document.querySelectorAll('#admin-texts-list .admin-text-ru').forEach((ta) => {
+            const key = ta.getAttribute('data-key');
+            if (!key) return;
+            rows.push({ key, lang: 'ru', value: ta.value });
+          });
+          document.querySelectorAll('#admin-texts-list .admin-text-en').forEach((ta) => {
+            const key = ta.getAttribute('data-key');
+            if (!key) return;
+            rows.push({ key, lang: 'en', value: ta.value });
+          });
+          const updated = await saveAdminTexts(rows);
+          state.adminTexts = updated;
+          setTexts(updated);
+          alert(t.textsSaved);
+        } catch (e) {
+          alert((t.pricesError || 'Ошибка') + ': ' + (e?.message || ''));
+        }
+      });
+    }
+    if (resetBtn) {
+      resetBtn.addEventListener('click', async () => {
+        if (!confirm(state.lang === 'ru' ? 'Сбросить все изменения текстов к исходным?' : 'Reset all text changes to defaults?')) return;
+        try {
+          await resetAdminTexts();
+          state.adminTexts = [];
+          // перезагрузить конфиг, чтобы вернулся базовый I18N без оверрайдов
+          // (initAppConfig заново применит setTexts с пустым списком)
+          await initAppConfig();
+          alert(t.textsReset);
           renderAdmin();
         } catch (e) {
           alert((t.pricesError || 'Ошибка') + ': ' + (e?.message || ''));
