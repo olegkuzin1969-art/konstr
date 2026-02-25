@@ -2732,8 +2732,14 @@ function renderHome() {
             </div>
             <div class="field">
               <div class="stacked-label">${tContacts.telegram}</div>
-              <div class="tag"><a href="https://t.me/k0nstruct_bot" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">@k0nstruct_bot</a></div>
-              <div class="tag"><a href="https://t.me/SDTSamara" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">Сообщество в Telegram</a></div>
+              <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start">
+                <div class="tag">
+                  <a href="https://t.me/k0nstruct_bot" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">@k0nstruct_bot</a>
+                </div>
+                <div class="tag">
+                  <a href="https://t.me/SDTSamara" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">Сообщество в Telegram</a>
+                </div>
+              </div>
             </div>
             </div>
             <div class="neo-card">
