@@ -1075,6 +1075,22 @@ html {
   position: relative;
 }
 
+.hero-photo-wrap {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin: -6px -4px 16px;
+  background: var(--bg-soft);
+  box-shadow: inset 2px 2px 4px rgba(163, 177, 198, 0.4);
+}
+
+.hero-photo {
+  width: 100%;
+  height: auto;
+  max-height: 220px;
+  object-fit: cover;
+  display: block;
+}
+
 .hero-side {
   align-self: stretch;
 }

@@ -2592,6 +2592,9 @@ function renderHome() {
       <section id="hero" class="section hero-section">
         <div class="hero-grid">
           <div class="hero-main neo-card float-up">
+            <div class="hero-photo-wrap">
+              <img src="/img/hero.jpg" alt="" class="hero-photo" loading="lazy" />
+            </div>
             <div class="badge">
               <span class="badge-dot"></span>
               ${tHero.badge}
