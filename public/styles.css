@@ -88,7 +88,7 @@ html {
 /* Кнопка инструкции справа под шапкой, закреплена при скролле */
 .nav-instruction-btn {
   position: fixed;
-  top: 56px;
+  top: 72px;
   right: 16px;
   width: 40px;
   height: 40px;
@@ -113,7 +113,7 @@ html {
   box-shadow: 8px 8px 16px rgba(163, 177, 198, 0.7), -6px -6px 12px rgba(255, 255, 255, 1);
 }
 .tg-miniapp .nav-instruction-btn {
-  top: calc(56px + env(safe-area-inset-top, 0) + 32px);
+  top: calc(72px + env(safe-area-inset-top, 0) + 32px);
   right: calc(16px + env(safe-area-inset-right, 0));
 }
 
