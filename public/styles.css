@@ -85,6 +85,38 @@ html {
   padding-top: calc(14px + env(safe-area-inset-top, 0) + 32px);
 }
 
+/* Кнопка инструкции справа под шапкой, закреплена при скролле */
+.nav-instruction-btn {
+  position: fixed;
+  top: 56px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9;
+  box-shadow: 6px 6px 12px rgba(163, 177, 198, 0.6), -6px -6px 12px rgba(255, 255, 255, 0.9);
+  transition: 0.2s ease;
+  padding: 0;
+  line-height: 1;
+}
+.nav-instruction-btn:hover {
+  color: var(--accent);
+  box-shadow: 8px 8px 16px rgba(163, 177, 198, 0.7), -6px -6px 12px rgba(255, 255, 255, 1);
+}
+.tg-miniapp .nav-instruction-btn {
+  top: calc(56px + env(safe-area-inset-top, 0) + 32px);
+  right: calc(16px + env(safe-area-inset-right, 0));
+}
+
 .header-left {
   display: flex;
   align-items: center;

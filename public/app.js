@@ -948,6 +948,8 @@ const I18N = {
       contacts: "Контакты",
       legal: "Документы",
     },
+    navInstructionTitle: "Как пользоваться сайтом",
+    navInstructionText: "<p><strong>Главная</strong> — начало страницы, описание сервиса и кнопки перехода к форме или тарифам.</p><p><strong>Услуга</strong> — форма заполнения шаблона: выберите шаблон, заполните поля и оформите заказ.</p><p><strong>Блог</strong> — статьи и новости.</p><p><strong>Контакты</strong> — email, Telegram и форма обратной связи.</p><p><strong>Документы</strong> — оферта, политика конфиденциальности, Кодекс и Декларация.</p>",
     footer: {
       offer: "Публичная оферта",
       privacy: "Политика конфиденциальности",
@@ -1468,6 +1470,8 @@ const I18N = {
       contacts: "Contacts",
       legal: "Legal",
     },
+    navInstructionTitle: "How to use the site",
+    navInstructionText: "<p><strong>Home</strong> — top of the page, service description and buttons to the form or pricing.</p><p><strong>Service</strong> — template form: choose a template, fill in the fields and place an order.</p><p><strong>Blog</strong> — articles and news.</p><p><strong>Contacts</strong> — email, Telegram and feedback form.</p><p><strong>Legal</strong> — offer, privacy policy, Codex and Declaration.</p>",
     footer: {
       offer: "Public offer",
       privacy: "Privacy policy",
@@ -2541,6 +2545,36 @@ function applyLanguageToShell() {
   });
 
   updateAdminNav();
+
+  const navInstructionBtn = document.getElementById("nav-instruction-btn");
+  if (navInstructionBtn) {
+    const isAdmin = (window.location.hash || "").startsWith("#admin");
+    navInstructionBtn.style.display = isAdmin ? "none" : "flex";
+    navInstructionBtn.setAttribute("aria-label", state.lang === "ru" ? "Инструкция" : "Help");
+  }
+}
+
+function openNavInstructionModal() {
+  const t = I18N[state.lang];
+  const title = t.navInstructionTitle;
+  const text = t.navInstructionText;
+  const overlay = document.createElement("div");
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;";
+  const box = document.createElement("div");
+  box.className = "neo-card";
+  box.style.cssText = "max-width:520px;width:100%;max-height:90vh;overflow:auto;";
+  box.innerHTML = `
+    <h3 class="preview-title" style="margin-top:0">${title}</h3>
+    <div class="small legal-content" style="line-height:1.6;margin-top:12px">${text}</div>
+    <div style="margin-top:16px">
+      <button type="button" class="primary-btn" id="nav-instruction-close">${state.lang === "ru" ? "Понятно" : "Got it"}</button>
+    </div>
+  `;
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  box.querySelector("#nav-instruction-close").addEventListener("click", close);
 }
 
 // ========== PAGES ==========
@@ -4574,6 +4608,11 @@ function initShell() {
       render();
     });
   });
+
+  const navInstructionBtn = document.getElementById("nav-instruction-btn");
+  if (navInstructionBtn) {
+    navInstructionBtn.addEventListener("click", openNavInstructionModal);
+  }
 
   window.addEventListener("hashchange", () => {
     const hash = window.location.hash || "";
