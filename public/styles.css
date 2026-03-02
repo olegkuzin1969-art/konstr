@@ -1100,6 +1100,22 @@ html {
   line-height: 1.6;
 }
 
+.hero-experts {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.hero-experts-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+.hero-experts-text {
+  margin: 0;
+}
+
 .section-header {
   margin-bottom: 18px;
 }

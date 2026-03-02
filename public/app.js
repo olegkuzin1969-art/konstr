@@ -1027,6 +1027,9 @@ const I18N = {
         "Выбираете тариф: самостоятельно или с проверкой эксперта.",
         "Получаете готовый PDF и инструкции по отправке обращения.",
       ],
+      expertsTitle: "Наши эксперты",
+      expertsText:
+        "Специалисты по работе с системными структурами ЖКХ, банковского сектора и других направлений.",
     },
     service: {
       title: "Тарифы сервиса",
@@ -1549,6 +1552,9 @@ const I18N = {
         "You choose a plan: self‑service or with expert review.",
         "You receive a ready PDF and instructions on how to send it.",
       ],
+      expertsTitle: "Our experts",
+      expertsText:
+        "Specialists experienced with housing and utilities systems, the banking sector and other institutional domains.",
     },
     service: {
       title: "Service plans",
@@ -2671,6 +2677,12 @@ function renderHome() {
                 .map((step) => `<li>${step}</li>`)
                 .join("")}
             </ol>
+            <div class="hero-experts">
+              <h3 class="hero-experts-title">${tHero.expertsTitle}</h3>
+              <p class="small muted-text hero-experts-text">
+                ${tHero.expertsText}
+              </p>
+            </div>
           </div>
         </div>
       </section>
