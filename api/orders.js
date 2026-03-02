@@ -121,6 +121,31 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
+      if (body.account || query.account === 'true') {
+        // Полное удаление аккаунта и связанных данных пользователя
+        const deletes = [];
+        deletes.push(supabase.from('drafts').delete().eq('user_id', userId));
+        deletes.push(supabase.from('orders').delete().eq('user_id', userId));
+        deletes.push(supabase.from('blog_comments').delete().eq('user_id', userId));
+        deletes.push(supabase.from('blog_posts').delete().eq('author_id', userId));
+
+        const results = await Promise.all(deletes);
+        for (const r of results) {
+          if (r.error) {
+            console.error('delete account step error:', r.error);
+            return res.status(500).json({ error: 'Не удалось удалить аккаунт' });
+          }
+        }
+
+        const { error: userErr } = await supabase.from('users').delete().eq('id', userId);
+        if (userErr) {
+          console.error('delete account user error:', userErr);
+          return res.status(500).json({ error: 'Не удалось удалить аккаунт' });
+        }
+
+        return res.status(200).json({ ok: true });
+      }
+
       const id = body.id || query.id;
       if (!id) return res.status(400).json({ error: 'id обязателен' });
       const { error } = await supabase.from('orders').delete().eq('id', id).eq('user_id', userId);

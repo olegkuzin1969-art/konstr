@@ -535,15 +535,15 @@ async function deleteAccount() {
 
   try {
     const headers = { 'Content-Type': 'application/json' };
-    const payload = {};
+    const payload = { account: true };
     if (isInTelegramWebApp() && window.Telegram?.WebApp?.initData) {
       payload.initData = window.Telegram.WebApp.initData;
     } else if (state.token) {
       headers['Authorization'] = 'Bearer ' + state.token;
     }
 
-    const res = await fetch(API_BASE + '/api/delete-account', {
-      method: 'POST',
+    const res = await fetch(API_BASE + '/api/orders', {
+      method: 'DELETE',
       headers,
       body: JSON.stringify(payload),
     });
