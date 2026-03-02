@@ -1103,6 +1103,8 @@ const I18N = {
       checkDataBeforePay: "Проверьте внесённые данные перед оплатой.",
       receiptEmailLabel: "Email для чека (обязательно)",
       receiptEmailPlaceholder: "example@mail.ru",
+      payConsentLabel: "Я соглашаюсь на обработку персональных данных.",
+      payConsentError: "Поставьте галочку согласия на обработку персональных данных.",
       pay: "Оплатить",
       cancel: "Отмена",
       paymentSuccess: "Оплата прошла. Заказ создан. Присоединяйтесь к нашему сообществу в Telegram: https://t.me/SDTSamara",
@@ -1628,6 +1630,8 @@ const I18N = {
       checkDataBeforePay: "Please check the entered data before payment.",
       receiptEmailLabel: "Email for receipt (required)",
       receiptEmailPlaceholder: "example@mail.com",
+      payConsentLabel: "I agree to personal data processing.",
+      payConsentError: "Please accept personal data processing.",
       pay: "Pay",
       cancel: "Cancel",
       paymentSuccess: "Payment successful. Order created. Join our Telegram community: https://t.me/SDTSamara",
@@ -2074,7 +2078,11 @@ function showPaymentModal() {
       <pre style="white-space:pre-wrap;font-family:system-ui,sans-serif;font-size:13px;margin:0">${escapeHtml(letter)}</pre>
     </div>
     <div class="stacked-label" style="margin-bottom:6px">${t.receiptEmailLabel}</div>
-    <input type="email" id="payment-modal-receipt-email" class="input" placeholder="${t.receiptEmailPlaceholder}" required style="width:100%;margin-bottom:16px;box-sizing:border-box;">
+    <input type="email" id="payment-modal-receipt-email" class="input" placeholder="${t.receiptEmailPlaceholder}" required style="width:100%;margin-bottom:12px;box-sizing:border-box;">
+    <label class="checkbox-pill" style="margin-bottom:16px;align-items:flex-start;gap:8px;">
+      <input type="checkbox" id="payment-modal-consent" />
+      <span class="small muted-text">${t.payConsentLabel}</span>
+    </label>
     <div class="btn-row" style="gap:8px;flex-wrap:wrap;">
       <button type="button" class="secondary-btn" id="payment-modal-cancel">${t.cancel}</button>
       <button type="button" class="primary-btn" id="payment-modal-pay">${t.pay}</button>
@@ -2094,6 +2102,7 @@ function showPaymentModal() {
 
   box.querySelector('#payment-modal-pay').addEventListener('click', async () => {
     const emailInput = box.querySelector('#payment-modal-receipt-email');
+    const consentCheckbox = box.querySelector('#payment-modal-consent');
     const receiptEmail = emailInput?.value?.trim() || '';
     if (!receiptEmail) {
       alert(state.lang === 'ru' ? 'Укажите email для чека.' : 'Enter email for receipt.');
@@ -2104,6 +2113,11 @@ function showPaymentModal() {
     if (!emailRegex.test(receiptEmail)) {
       alert(state.lang === 'ru' ? 'Укажите корректный email (например example@mail.ru).' : 'Enter a valid email (e.g. example@mail.com).');
       emailInput?.focus();
+      return;
+    }
+    if (!consentCheckbox || !consentCheckbox.checked) {
+      alert(t.payConsentError);
+      consentCheckbox?.focus();
       return;
     }
     const orderData = { ...state.constructorForm, withExpert: state.withExpert };
