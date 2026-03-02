@@ -4575,6 +4575,58 @@ function initProfile() {
   updateProfileUI();
 }
 
+function ensureDisclaimerModal() {
+  if (document.getElementById("disclaimer-modal-overlay")) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = "disclaimer-modal-overlay";
+  overlay.className = "modal-overlay";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,0.4);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;backdrop-filter:blur(3px);box-sizing:border-box;";
+
+  const title = state.lang === "ru" ? "Важно" : "Important";
+  const text =
+    state.lang === "ru"
+      ? "«Конструкт» — это инструмент-помощник для подготовки обращений и документов. Он не является юридической консультацией и не заменяет профессиональную помощь. Команда сервиса не несёт ответственности за принятые вами решения, корректность введённых данных и результаты использования подготовленных документов."
+      : "\"Konstruct\" is an assistant tool for drafting requests and documents. It is not legal advice and does not replace professional support. The team is not responsible for your decisions, the correctness of the data you provide, or the results of using the generated documents.";
+
+  overlay.innerHTML = `
+    <div class="modal-content">
+      <button type="button" class="modal-close" aria-label="${state.lang === "ru" ? "Закрыть" : "Close"}">&times;</button>
+      <h3 class="modal-title">${title}</h3>
+      <p class="small muted-text" style="font-size:13px;line-height:1.6;margin:0;">
+        ${text}
+      </p>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const box = overlay.querySelector(".modal-content");
+  const closeBtn = overlay.querySelector(".modal-close");
+
+  const close = () => {
+    overlay.remove();
+  };
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", close);
+  }
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+
+  if (box) {
+    box.addEventListener("click", (e) => e.stopPropagation());
+  }
+}
+
+function showDisclaimerOnFirstVisit() {
+  if (window.__disclaimerShown) return;
+  window.__disclaimerShown = true;
+  ensureDisclaimerModal();
+}
+
 // ========== INIT ==========
 
 function initShell() {
@@ -4616,6 +4668,8 @@ function initShell() {
   if (navInstructionBtn) {
     navInstructionBtn.addEventListener("click", openNavInstructionModal);
   }
+
+  showDisclaimerOnFirstVisit();
 
   window.addEventListener("hashchange", () => {
     const hash = window.location.hash || "";

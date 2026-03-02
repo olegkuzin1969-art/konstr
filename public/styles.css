@@ -1225,6 +1225,7 @@ html {
 
 /* Modal */
 .modal-overlay .modal-content {
+  position: relative;
   background: var(--bg);
   border-radius: 18px;
   padding: 24px;
@@ -1257,6 +1258,18 @@ html {
   margin: 0;
   white-space: pre-wrap;
   font-family: inherit;
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text-muted);
 }
 
 .modal-overlay .modal-actions {
