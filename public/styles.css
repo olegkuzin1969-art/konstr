@@ -1126,6 +1126,32 @@ html {
   max-width: 520px;
 }
 
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.faq-item {
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.faq-item:first-child {
+  border-top: none;
+}
+
+.faq-question {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.faq-answer {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .cards-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
