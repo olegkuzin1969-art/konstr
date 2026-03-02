@@ -523,6 +523,51 @@ function logout() {
   render();
 }
 
+async function deleteAccount() {
+  if (!state.user) return;
+  const ru = state.lang === 'ru';
+  const confirmed = confirm(
+    ru
+      ? 'Удалить аккаунт и все связанные с ним данные? Это действие нельзя отменить.'
+      : 'Delete your account and all related data? This cannot be undone.'
+  );
+  if (!confirmed) return;
+
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    const payload = {};
+    if (isInTelegramWebApp() && window.Telegram?.WebApp?.initData) {
+      payload.initData = window.Telegram.WebApp.initData;
+    } else if (state.token) {
+      headers['Authorization'] = 'Bearer ' + state.token;
+    }
+
+    const res = await fetch(API_BASE + '/api/delete-account', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || (ru ? 'Не удалось удалить аккаунт' : 'Failed to delete account'));
+    }
+
+    // После успешного удаления — выходим везде (локальный стейт + токены).
+    logout();
+    alert(
+      ru
+        ? 'Аккаунт удалён. Вы вышли из системы на всех устройствах.'
+        : 'Account deleted. You have been signed out on all devices.'
+    );
+  } catch (e) {
+    alert(
+      (state.lang === 'ru'
+        ? 'Ошибка удаления аккаунта: '
+        : 'Account deletion error: ') + (e.message || '')
+    );
+  }
+}
+
 // ========== DRAFTS (API + БД) ==========
 
 async function draftsApi(method, body = {}) {
@@ -4484,6 +4529,9 @@ function updateProfileUI() {
       </div>
       <button class="profile-menu-item" onclick="goToDashboard()">${state.lang === 'ru' ? 'Профиль' : 'Profile'}</button>
       <button class="profile-menu-item logout" onclick="logout()">${state.lang === 'ru' ? 'Выйти' : 'Logout'}</button>
+      <button class="profile-menu-item logout" style="margin-top:8px;color:var(--danger);" onclick="deleteAccount()">
+        ${state.lang === 'ru' ? 'Удалить аккаунт' : 'Delete account'}
+      </button>
     `;
   } else {
     avatarEl.innerHTML = `
