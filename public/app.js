@@ -2696,6 +2696,7 @@ function renderHome() {
   const tForm = I18N[state.lang].constructor;
   const tContacts = I18N[state.lang].contacts;
   const tLegal = I18N[state.lang].legal;
+  const tFaq = I18N[state.lang].faq;
 
   appRoot.innerHTML = `
     <div class="landing">
@@ -2920,10 +2921,10 @@ function renderHome() {
       <section id="faq" class="section">
         <div class="neo-card section-shell">
           <div class="section-header">
-            <h2 class="section-title">${tLegal.faq?.title || 'FAQ'}</h2>
+            <h2 class="section-title">${tFaq?.title || 'FAQ'}</h2>
           </div>
           <div class="faq-list">
-            ${(tLegal.faq?.items || []).map(item => `
+            ${(tFaq?.items || []).map(item => `
               <div class="faq-item">
                 <div class="faq-question">${item.q}</div>
                 <div class="faq-answer small muted-text">${item.a}</div>
