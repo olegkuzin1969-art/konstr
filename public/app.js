@@ -1092,6 +1092,21 @@ const I18N = {
       emailPlaceholder: "example@mail.ru",
       extraInfo: "Иная информация (необязательно)",
       extraInfoPlaceholder: "Например: сведения о посеве газона, ремонте детской площадки",
+      fieldHelpTitle: "Подсказка по полю",
+      fieldHelp: {
+        fullName: "Укажите ФИО полностью так, как оно записано в паспорте (Фамилия Имя Отчество).",
+        address: "Адрес регистрации и фактического проживания из паспорта или договора: индекс, город, улица, дом, квартира.",
+        passportSeries: "Серия паспорта из разворота паспорта: четыре цифры без пробелов.",
+        passportNumber: "Номер паспорта из разворота паспорта: шесть цифр без пробелов.",
+        passportIssued: "Кем и когда выдан паспорт — как указано в паспорте (орган, дата выдачи).",
+        phone: "Ваш контактный телефон, по которому с вами можно связаться по обращению.",
+        ukName: "Полное наименование управляющей компании или ФИО руководителя, как в договоре или квитанции.",
+        ukAddress: "Почтовый адрес управляющей компании из договора, квитанции или сайта УК.",
+        period: "Период начислений, за который вы запрашиваете документы, например: с 01.01.2025 по 31.03.2025.",
+        accountNumber: "Номер лицевого счёта из квитанции на оплату ЖКУ (если есть).",
+        emailForReply: "Email, на который вы готовы получать официальный ответ по обращению.",
+        extraInfo: "Любые дополнительные сведения, которые важны для вашей ситуации (например, описание проблемы, особенности дома или договора)."
+      },
       withExpert: "Хочу проверку эксперта (+1 500 ₽)",
       saveDraft: "Сохранить черновик",
       createOrder: "Создать заказ",
@@ -1642,6 +1657,21 @@ const I18N = {
       emailPlaceholder: "example@mail.com",
       extraInfo: "Other information (optional)",
       extraInfoPlaceholder: "e.g. lawn, playground repair",
+      fieldHelpTitle: "Field help",
+      fieldHelp: {
+        fullName: "Enter your full legal name exactly as in your passport or ID (Surname, Name, Patronymic if applicable).",
+        address: "Your registration and actual residence address: postcode, city, street, building, apartment.",
+        passportSeries: "Passport series from your national ID (first four digits).",
+        passportNumber: "Passport number from your national ID (six digits).",
+        passportIssued: "Issuing authority and date from your passport/ID.",
+        phone: "Contact phone number we can use regarding this request.",
+        ukName: "Full legal name of the management company or the director, as in your contract or utility bill.",
+        ukAddress: "Postal address of the management company from the contract, bill or official website.",
+        period: "Billing period you are referring to, e.g. 01.01.2025–31.03.2025.",
+        accountNumber: "Personal account / contract number from your utility bill (if you have one).",
+        emailForReply: "Email address where you are ready to receive the official reply.",
+        extraInfo: "Any additional context that may help: description of the issue, dates, specific circumstances."
+      },
       withExpert: "I want expert review (+1 500 ₽)",
       saveDraft: "Save draft",
       createOrder: "Create order",
@@ -2666,6 +2696,36 @@ function applyLanguageToShell() {
   }
 }
 
+function openFieldHelpModal(key, label) {
+  const dict = I18N[state.lang].constructor || {};
+  const title = dict.fieldHelpTitle || (state.lang === 'ru' ? 'Подсказка по полю' : 'Field help');
+  const helpMap = dict.fieldHelp || {};
+  let text = helpMap[key];
+  if (!text) {
+    text = state.lang === 'ru'
+      ? `Заполните поле «${label || ''}» по смыслу его названия. Если не уверены, оставьте комментарий в дополнительной информации или выберите тариф с экспертом.`
+      : `Fill in the “${label || ''}” field according to its name. If unsure, add a note in the extra information or choose the plan with expert review.`;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;box-sizing:border-box;';
+  overlay.innerHTML = `
+    <div class="modal-content">
+      <h3 class="modal-title">${title}</h3>
+      <p class="small" style="line-height:1.6;margin-bottom:16px">${text}</p>
+      <div class="modal-actions">
+        <button type="button" class="primary-btn" id="field-help-close">${state.lang === 'ru' ? 'Понятно' : 'Got it'}</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  overlay.querySelector('#field-help-close')?.addEventListener('click', close);
+}
+
 function openNavInstructionModal() {
   const t = I18N[state.lang];
   const title = t.navInstructionTitle;
@@ -2814,7 +2874,7 @@ function renderHome() {
                 const esc = (s) => (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
                 let html = '';
                 if (templates.length > 1) {
-                  html += `<div class="field"><div class="stacked-label">${tForm.template}</div><select class="input" name="templateId">${templates.map(t => `<option value="${escapeHtml(String(t.id))}" ${String(t.id) === String(state.constructorForm.templateId) ? 'selected' : ''}>${escapeHtml(String(t.name || 'Template'))}</option>`).join('')}</select></div>`;
+                  html += `<div class="field"><div class="stacked-label label-with-help"><span>${tForm.template}</span></div><select class="input" name="templateId">${templates.map(t => `<option value="${escapeHtml(String(t.id))}" ${String(t.id) === String(state.constructorForm.templateId) ? 'selected' : ''}>${escapeHtml(String(t.name || 'Template'))}</option>`).join('')}</select></div>`;
                 }
                 const passportKeys = ['passportSeries','passportNumber','passportIssued'];
                 const passportVars = passportKeys.map((k) => variables.find((x) => x.key === k)).filter(Boolean);
@@ -2826,20 +2886,22 @@ function renderHome() {
                       html += '<div class="field" style="display:flex;gap:8px;flex-wrap:wrap;">';
                       passportVars.forEach((pv) => {
                         const val = esc(fields[pv.key]);
-                        if (pv.key === 'passportSeries') html += `<div style="flex:0 0 80px;"><div class="stacked-label">${escapeHtml(pv.label)}</div><input class="input" name="${pv.key}" value="${val}" placeholder="0000" maxlength="4" /></div>`;
-                        else if (pv.key === 'passportNumber') html += `<div style="flex:0 0 120px;"><div class="stacked-label">${escapeHtml(pv.label)}</div><input class="input" name="${pv.key}" value="${val}" placeholder="000000" maxlength="6" /></div>`;
-                        else html += `<div style="flex:1;min-width:180px;"><div class="stacked-label">${escapeHtml(pv.label)}</div><input class="input" name="${pv.key}" value="${val}" placeholder="${escapeHtml(pv.label)}" /></div>`;
+                        const helpLabel = escapeHtml(pv.label);
+                        if (pv.key === 'passportSeries') html += `<div style="flex:0 0 80px;"><div class="stacked-label label-with-help"><span>${helpLabel}</span><button type="button" class="field-help-btn" data-help-key="${pv.key}" data-help-label="${helpLabel}">?</button></div><input class="input" name="${pv.key}" value="${val}" placeholder="0000" maxlength="4" /></div>`;
+                        else if (pv.key === 'passportNumber') html += `<div style="flex:0 0 120px;"><div class="stacked-label label-with-help"><span>${helpLabel}</span><button type="button" class="field-help-btn" data-help-key="${pv.key}" data-help-label="${helpLabel}">?</button></div><input class="input" name="${pv.key}" value="${val}" placeholder="000000" maxlength="6" /></div>`;
+                        else html += `<div style="flex:1;min-width:180px;"><div class="stacked-label label-with-help"><span>${helpLabel}</span><button type="button" class="field-help-btn" data-help-key="${pv.key}" data-help-label="${helpLabel}">?</button></div><input class="input" name="${pv.key}" value="${val}" placeholder="${helpLabel}" /></div>`;
                       });
                       html += '</div>';
                     }
                     return;
                   }
                   const val = esc(fields[v.key]);
+                  const label = escapeHtml(v.label);
                   if (v.key === 'extraInfo') {
-                    html += `<div class="field"><div class="stacked-label">${escapeHtml(v.label)}</div><textarea class="textarea input" name="${escapeHtml(v.key)}" placeholder="${escapeHtml(v.label)}" rows="2">${val}</textarea></div>`;
+                    html += `<div class="field"><div class="stacked-label label-with-help"><span>${label}</span><button type="button" class="field-help-btn" data-help-key="${escapeHtml(v.key)}" data-help-label="${label}">?</button></div><textarea class="textarea input" name="${escapeHtml(v.key)}" placeholder="${label}" rows="2">${val}</textarea></div>`;
                   } else {
                     const type = v.key === 'emailForReply' ? 'email' : (v.key === 'phone' ? 'tel' : 'text');
-                    html += `<div class="field"><div class="stacked-label">${escapeHtml(v.label)}</div><input class="input" name="${escapeHtml(v.key)}" value="${val}" placeholder="${escapeHtml(v.label)}" type="${type}" /></div>`;
+                    html += `<div class="field"><div class="stacked-label label-with-help"><span>${label}</span><button type="button" class="field-help-btn" data-help-key="${escapeHtml(v.key)}" data-help-label="${label}">?</button></div><input class="input" name="${escapeHtml(v.key)}" value="${val}" placeholder="${label}" type="${type}" /></div>`;
                   }
                 });
                 return html;
@@ -2986,6 +3048,14 @@ function renderHome() {
       render();
     });
   }
+
+  document.querySelectorAll(".field-help-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const key = btn.getAttribute("data-help-key") || "";
+      const label = btn.getAttribute("data-help-label") || "";
+      openFieldHelpModal(key, label);
+    });
+  });
 
   const btnSaveDraft = document.getElementById("btn-save-draft");
   if (btnSaveDraft) {
