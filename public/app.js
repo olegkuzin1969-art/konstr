@@ -2253,6 +2253,108 @@ function showPaymentModal() {
   document.body.appendChild(overlay);
 }
 
+function showBalancePaymentModal(orderData) {
+  const t = I18N[state.lang].constructor;
+  const letter = getLetterPreview();
+  const overlay = document.createElement('div');
+  overlay.id = 'balance-payment-modal-overlay';
+  overlay.className = 'payment-modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  const box = document.createElement('div');
+  box.className = 'neo-card';
+  box.style.cssText = 'max-width:520px;width:100%;max-height:90vh;overflow:auto;';
+  box.innerHTML = `
+    <h3 class="preview-title" style="margin-top:0">${t.payModalTitle}</h3>
+    <p class="small muted-text" style="margin-bottom:12px">${t.checkDataBeforePay}</p>
+    <div class="preview-letter" style="background:#f5f5f5;padding:12px;border-radius:8px;margin-bottom:16px;max-height:240px;overflow:auto;">
+      <pre style="white-space:pre-wrap;font-family:system-ui,sans-serif;font-size:13px;margin:0">${escapeHtml(letter)}</pre>
+    </div>
+    <div class="stacked-label" style="margin-bottom:6px">${t.receiptEmailLabel}</div>
+    <input type="email" id="balance-payment-modal-receipt-email" class="input" placeholder="${t.receiptEmailPlaceholder}" required style="width:100%;margin-bottom:12px;box-sizing:border-box;">
+    <label class="checkbox-pill" style="margin-bottom:16px;align-items:flex-start;gap:8px;">
+      <input type="checkbox" id="balance-payment-modal-consent" />
+      <span class="small muted-text">${t.payConsentLabel}</span>
+    </label>
+    <div class="btn-row" style="gap:8px;flex-wrap:wrap;">
+      <button type="button" class="secondary-btn" id="balance-payment-modal-cancel">${t.cancel}</button>
+      <button type="button" class="primary-btn" id="balance-payment-modal-pay">${t.pay}</button>
+    </div>
+  `;
+  overlay.appendChild(box);
+
+  function closeModal() {
+    overlay.remove();
+  }
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeModal();
+  });
+
+  box.querySelector('#balance-payment-modal-cancel').addEventListener('click', closeModal);
+
+  box.querySelector('#balance-payment-modal-pay').addEventListener('click', async () => {
+    const emailInput = box.querySelector('#balance-payment-modal-receipt-email');
+    const consentCheckbox = box.querySelector('#balance-payment-modal-consent');
+    const receiptEmail = emailInput?.value?.trim() || '';
+    if (!receiptEmail) {
+      alert(state.lang === 'ru' ? 'Укажите email для чека.' : 'Enter email for receipt.');
+      emailInput?.focus();
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(receiptEmail)) {
+      alert(state.lang === 'ru' ? 'Укажите корректный email (например example@mail.ru).' : 'Enter a valid email (e.g. example@mail.com).');
+      emailInput?.focus();
+      return;
+    }
+    if (!consentCheckbox || !consentCheckbox.checked) {
+      alert(t.payConsentError);
+      consentCheckbox?.focus();
+      return;
+    }
+
+    const payBtn = box.querySelector('#balance-payment-modal-pay');
+    payBtn.disabled = true;
+    payBtn.textContent = state.lang === 'ru' ? 'Обработка…' : 'Processing…';
+
+    try {
+      const fullOrderData = { ...orderData, receiptEmail };
+      const order = await createOrderApi(fullOrderData);
+      clearConstructorForm();
+      state.profileOrders = [order, ...(state.profileOrders || [])];
+      if (order && typeof order.balance === 'number') {
+        state.user = { ...(state.user || {}), balance: order.balance };
+        localStorage.setItem('user', JSON.stringify(state.user));
+        updateHeaderBalance();
+      }
+      closeModal();
+      alert(state.lang === 'ru'
+        ? 'Заказ создан и оплачен с баланса BYE.'
+        : 'Order created and paid from BYE balance.');
+      window.location.hash = '#profile';
+      render();
+    } catch (e) {
+      payBtn.disabled = false;
+      payBtn.textContent = t.pay;
+      const msg = e?.message || '';
+      if (msg.includes('Недостаточно средств')) {
+        closeModal();
+        alert(state.lang === 'ru'
+          ? 'Недостаточно средств на балансе BYE. Пополните баланс во вкладке «Баланс».'
+          : 'Insufficient BYE balance. Please top up on the Balance page.');
+        window.location.hash = '#balance';
+        render();
+      } else {
+        alert(state.lang === 'ru'
+          ? 'Ошибка: ' + (msg || 'Проверьте подключение')
+          : 'Error: ' + (msg || 'Check connection'));
+      }
+    }
+  });
+
+  document.body.appendChild(overlay);
+}
+
 async function createOrder() {
   if (!state.user) {
     alert(I18N[state.lang].alerts.mustLogin);
@@ -2270,19 +2372,7 @@ async function createOrder() {
       window.location.hash = '#profile';
       render();
     } else {
-      const order = await createOrderApi(orderData);
-      clearConstructorForm();
-      state.profileOrders = [order, ...(state.profileOrders || [])];
-      if (typeof order.balance === 'number') {
-        state.user = { ...(state.user || {}), balance: order.balance };
-        localStorage.setItem('user', JSON.stringify(state.user));
-        updateHeaderBalance();
-      }
-      alert(state.lang === 'ru'
-        ? 'Заказ создан и оплачен с баланса BYE.'
-        : 'Order created and paid from BYE balance.');
-      window.location.hash = '#profile';
-      render();
+      showBalancePaymentModal(orderData);
     }
   } catch (e) {
     const msg = e?.message || '';
