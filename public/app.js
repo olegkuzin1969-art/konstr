@@ -748,6 +748,7 @@ async function adminOrdersApi(method, body = {}) {
     const params = new URLSearchParams();
     if (payload.resource) params.set('resource', payload.resource);
     if (payload.initData) params.set('initData', payload.initData);
+     if (payload.user_id) params.set('user_id', payload.user_id);
     const qs = params.toString();
     if (qs) url += '?' + qs;
     // тело для GET не отправляем
