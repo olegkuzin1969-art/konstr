@@ -217,6 +217,12 @@ function setAppearance(appearance) {
   applyAppearance(state.appearance);
 }
 
+function formatBalanceBye(value) {
+  const n = Number(value) || 0;
+  const locale = state.lang === 'ru' ? 'ru-RU' : 'en-US';
+  return `${n.toLocaleString(locale)} BYE`;
+}
+
 function setTextByPath(lang, path, value) {
   if (!lang || !path) return;
   const parts = path.split('.');
@@ -246,6 +252,16 @@ function applyTextOverrides(texts) {
 function setTexts(list) {
   state.texts = Array.isArray(list) ? list : [];
   applyTextOverrides(state.texts);
+}
+
+function updateHeaderBalance() {
+  const el = document.getElementById('profile-balance');
+  if (!el) return;
+  if (!state.user) {
+    el.textContent = '';
+    return;
+  }
+  el.textContent = formatBalanceBye(state.user.balance ?? 0);
 }
 
 function getTemplateVariables(tpl) {
@@ -444,6 +460,7 @@ async function tryTmaLogin() {
     }
     state.user = { ...user, photo_url: photoUrl };
     localStorage.setItem('user', JSON.stringify(state.user));
+    updateHeaderBalance();
     if (window.Telegram?.WebApp?.ready) window.Telegram.WebApp.ready();
     if (window.Telegram?.WebApp?.expand) window.Telegram.WebApp.expand();
     return true;
@@ -485,18 +502,21 @@ function checkSavedAuth() {
   }
   const tok = localStorage.getItem('drafts_token');
   if (tok) state.token = tok;
+  updateHeaderBalance();
 }
 
 async function initAuth() {
   checkSavedAuth();
   if (state.user) {
     updateProfileUI();
+    updateHeaderBalance();
     await checkAdminStatus();
     updateAdminNav();
     return;
   }
   if (await tryTmaLogin()) {
     updateProfileUI();
+    updateHeaderBalance();
     await checkAdminStatus();
     updateAdminNav();
     return;
@@ -521,6 +541,7 @@ function logout() {
   updateProfileUI();
   closeProfileDropdown();
   render();
+  updateHeaderBalance();
 }
 
 async function deleteAccount() {
@@ -2638,6 +2659,8 @@ function applyLanguageToShell() {
     navLinks[4].textContent = dict.nav.contacts;
     navLinks[5].textContent = dict.nav.legal;
   }
+
+  updateHeaderBalance();
 
   const footerLinks = document.querySelectorAll(".footer-links .link-like");
   if (footerLinks.length >= 2) {

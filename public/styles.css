@@ -220,6 +220,14 @@ html {
 .profile-wrapper {
   position: relative;
   margin-left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-balance {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .profile-btn {

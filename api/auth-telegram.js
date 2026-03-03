@@ -189,6 +189,7 @@ module.exports = async function handler(req, res) {
         last_name: result.last_name,
         username: result.username,
         photo_url: photoUrl || result.photo_url,
+        balance: result.balance ?? 0,
       },
     };
     if (body.type === 'code') {
