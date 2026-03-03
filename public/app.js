@@ -1186,6 +1186,7 @@ const I18N = {
       offerPage: `
 <h2>1. Общие положения</h2>
 <p>Настоящая публичная оферта (далее — Оферта) является официальным предложением сервиса «Конструкт» (далее — Исполнитель) заключить договор оказания услуг на условиях, изложенных ниже, с любым физическим лицом (далее — Пользователь), которое примет условия настоящей Оферты.</p>
+<p><strong>Исполнитель:</strong> Индивидуальный предприниматель Старостина Дарья Олеговна, ИНН 631310667465.</p>
 <p>Акцептом Оферты в соответствии со статьёй 438 Гражданского кодекса РФ является факт оплаты услуг Пользователем.</p>
 
 <h2>2. Термины и определения</h2>
@@ -1735,6 +1736,7 @@ const I18N = {
       offerPage: `
 <h2>1. General</h2>
 <p>This Public Offer (hereinafter — Offer) is an official proposal of the Konstruct service (hereinafter — Provider) to conclude an agreement for the provision of services under the terms set forth below with any individual (hereinafter — User) who accepts these terms.</p>
+<p><strong>Provider:</strong> sole proprietor Daria Starostina, TIN 631310667465.</p>
 <p>Acceptance of the Offer constitutes the User's payment for the services.</p>
 
 <h2>2. Terms and definitions</h2>
