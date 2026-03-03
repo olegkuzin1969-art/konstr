@@ -4563,32 +4563,72 @@ async function renderAdmin() {
         }).join('');
 
         listEl.querySelectorAll('.admin-user-toggle').forEach((btn) => {
-          btn.addEventListener('click', async () => {
+          btn.addEventListener('click', () => {
             const uid = btn.getAttribute('data-user-id');
-            const card = btn.closest('[data-user-id]');
-            if (!uid || !card) return;
-            const details = card.querySelector('.admin-user-details');
-            if (!details) return;
-            const visible = details.style.display !== 'none';
-            if (visible) {
-              details.style.display = 'none';
-              return;
-            }
-            details.style.display = '';
-            const opsEl = details.querySelector(`#admin-user-ops-${uid}`);
-            if (!opsEl) return;
-            opsEl.textContent = state.lang === 'ru' ? 'Загрузка…' : 'Loading…';
-            try {
-              const data = await fetchAdminUserOperations(uid);
-              const ops = data || [];
-              if (!ops.length) {
-                opsEl.textContent = state.lang === 'ru' ? 'Операций пока нет.' : 'No operations yet.';
-              } else {
+            if (!uid) return;
+            const user = (state.adminUsers || []).find((u) => String(u.id) === String(uid));
+            if (!user) return;
+
+            const isRu = state.lang === 'ru';
+            const name = (user.first_name || user.last_name)
+              ? [user.first_name, user.last_name].filter(Boolean).join(' ')
+              : (user.username ? '@' + user.username : '—');
+            const balanceVal = Number(user.balance || 0);
+
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10002;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+            const box = document.createElement('div');
+            box.className = 'neo-card';
+            box.style.cssText = 'max-width:640px;width:100%;max-height:90vh;overflow:auto;';
+            box.innerHTML = `
+              <h3 class="preview-title" style="margin-top:0">${isRu ? 'Баланс пользователя' : 'User balance'}</h3>
+              <p class="small muted-text" style="margin-bottom:12px">${escapeHtml(name)}</p>
+              <div class="field" style="margin-bottom:12px">
+                <div class="stacked-label">${isRu ? 'Текущий баланс BYE' : 'Current BYE balance'}</div>
+                <div style="font-weight:700;font-size:18px;">${balanceVal.toLocaleString(isRu ? 'ru-RU' : 'en-US')} BYE</div>
+              </div>
+              <div class="field" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+                <div style="flex:0 0 140px;">
+                  <label class="stacked-label">${isRu ? 'Изменить на (BYE)' : 'Change by (BYE)'}</label>
+                  <input type="number" step="1" class="input" id="admin-user-delta-modal" value="0" />
+                </div>
+                <div style="flex:1;min-width:200px;">
+                  <label class="stacked-label">${isRu ? 'Описание операции' : 'Operation description'}</label>
+                  <input type="text" class="input" id="admin-user-comment-modal" placeholder="${isRu ? 'Например: корректировка баланса' : 'e.g. balance adjustment'}" />
+                </div>
+                <div style="flex:0 0 auto;align-self:flex-end;">
+                  <button type="button" class="primary-btn" id="admin-user-apply-modal">${isRu ? 'Применить' : 'Apply'}</button>
+                </div>
+              </div>
+              <div class="field">
+                <div class="stacked-label">${isRu ? 'История операций' : 'Operations history'}</div>
+                <div class="small" id="admin-user-ops-modal">${isRu ? 'Загрузка…' : 'Loading…'}</div>
+              </div>
+              <div class="btn-row" style="gap:8px;flex-wrap:wrap;margin-top:16px;">
+                <button type="button" class="secondary-btn" id="admin-user-close-modal">${isRu ? 'Закрыть' : 'Close'}</button>
+              </div>
+            `;
+            overlay.appendChild(box);
+            document.body.appendChild(overlay);
+
+            const close = () => overlay.remove();
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+            box.querySelector('#admin-user-close-modal')?.addEventListener('click', close);
+
+            (async () => {
+              try {
+                const ops = await fetchAdminUserOperations(uid);
+                const opsEl = box.querySelector('#admin-user-ops-modal');
+                if (!opsEl) return;
+                if (!ops || ops.length === 0) {
+                  opsEl.textContent = isRu ? 'Операций пока нет.' : 'No operations yet.';
+                  return;
+                }
                 opsEl.innerHTML = ops.map((op) => {
                   const amount = Number(op.amount_bye || 0);
                   const sign = amount > 0 ? '+' : '';
                   const byeStr = `${sign}${amount} BYE`;
-                  const d = op.created_at ? new Date(op.created_at).toLocaleString(state.lang === 'ru' ? 'ru-RU' : 'en-US') : '';
+                  const d = op.created_at ? new Date(op.created_at).toLocaleString(isRu ? 'ru-RU' : 'en-US') : '';
                   const desc = op.meta?.description || '';
                   const type = op.type || '';
                   return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid rgba(207,216,231,0.3);">
@@ -4600,35 +4640,37 @@ async function renderAdmin() {
                     <div style="font-weight:600;${amount>0 ? 'color:var(--accent);' : ''}">${escapeHtml(byeStr)}</div>
                   </div>`;
                 }).join('');
+              } catch (e) {
+                const opsEl = box.querySelector('#admin-user-ops-modal');
+                if (opsEl) opsEl.textContent = (isRu ? 'Ошибка: ' : 'Error: ') + (e?.message || '');
               }
-            } catch (e) {
-              opsEl.textContent = (state.lang === 'ru' ? 'Ошибка: ' : 'Error: ') + (e?.message || '');
-            }
-          });
-        });
+            })();
 
-        listEl.querySelectorAll('.admin-user-apply').forEach((btn) => {
-          btn.addEventListener('click', async () => {
-            const uid = btn.getAttribute('data-user-id');
-            if (!uid) return;
-            const deltaInput = listEl.querySelector(`.admin-user-delta[data-user-id="${uid}"]`);
-            const commentInput = listEl.querySelector(`.admin-user-comment[data-user-id="${uid}"]`);
-            const delta = parseInt(deltaInput?.value, 10);
-            const comment = commentInput?.value?.trim() || '';
-            if (!Number.isFinite(delta) || delta === 0) {
-              alert(state.lang === 'ru' ? 'Укажите ненулевое целое изменение баланса.' : 'Enter a non-zero integer delta.');
-              deltaInput?.focus();
-              return;
-            }
-            try {
-              const result = await changeAdminUserBalance(uid, delta, comment);
-              const updatedUser = result.user;
-              const updatedUsers = (state.adminUsers || []).map((u) => (u.id === updatedUser.id ? { ...u, balance: updatedUser.balance } : u));
-              state.adminUsers = updatedUsers;
-              renderAdmin();
-            } catch (e) {
-              alert((state.lang === 'ru' ? 'Ошибка: ' : 'Error: ') + (e?.message || ''));
-            }
+            box.querySelector('#admin-user-apply-modal')?.addEventListener('click', async () => {
+              const deltaInput = box.querySelector('#admin-user-delta-modal');
+              const commentInput = box.querySelector('#admin-user-comment-modal');
+              const raw = deltaInput?.value || '0';
+              const delta = parseInt(raw, 10);
+              const comment = commentInput?.value?.trim() || '';
+              if (!Number.isFinite(delta) || delta === 0) {
+                alert(isRu ? 'Укажите ненулевое целое изменение баланса.' : 'Enter a non-zero integer delta.');
+                deltaInput?.focus();
+                return;
+              }
+              try {
+                const result = await changeAdminUserBalance(uid, delta, comment);
+                const updatedUser = result.user;
+                const updatedUsers = (state.adminUsers || []).map((u) =>
+                  u.id === updatedUser.id ? { ...u, balance: updatedUser.balance } : u
+                );
+                state.adminUsers = updatedUsers;
+                alert(isRu ? 'Баланс обновлён.' : 'Balance updated.');
+                close();
+                renderAdmin();
+              } catch (e) {
+                alert((isRu ? 'Ошибка: ' : 'Error: ') + (e?.message || ''));
+              }
+            });
           });
         });
       }
