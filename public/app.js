@@ -1159,23 +1159,23 @@ const I18N = {
       sendError: "Ошибка отправки. Попробуйте позже.",
     },
     faq: {
-      title: "FAQ — frequently asked questions",
+      title: "FAQ — частые вопросы",
       items: [
         {
-          q: "What should I do after receiving the document?",
-          a: "Carefully check your details, print the document (or save the PDF) and follow the sending instructions described in the letter."
+          q: "Что делать после получения документа?",
+          a: "Внимательно проверьте свои данные, распечатайте документ (или сохраните PDF) и следуйте инструкции по отправке, указанной в тексте письма."
         },
         {
-          q: "Where should I send the request?",
-          a: "To the management company, utility provider, bank or other institution specified in the document header. Sending options include in‑person submission, registered mail with notification, or an official online account if available."
+          q: "Куда отправлять запрос?",
+          a: "В адрес управляющей компании, ресурсоснабжающей организации, банка или другой структуры, которая указана в шапке документа. Способ отправки — личный приём, заказное письмо с уведомлением или через официальный онлайн‑кабинет, если он предусмотрен."
         },
         {
-          q: "How do I know if the document worked?",
-          a: "You will receive an official response from the organization or see changes in charges/actions. Track response deadlines defined by law and compare the result with the goal of your request."
+          q: "Как понять, что документ сработал?",
+          a: "Вы получите официальный ответ от организации или увидите изменения в начислениях/действиях. Отслеживайте сроки ответа, указанные в законодательстве, и сверяйте результат с поставленной целью обращения."
         },
         {
-          q: "How can I get expert help?",
-          a: "When placing an order, select the plan with expert review: your request will be checked by specialists experienced with housing and utilities systems, the banking sector and other institutional domains, who will adjust wording if needed."
+          q: "Как получить помощь эксперта?",
+          a: "При оформлении заказа выберите тариф с проверкой эксперта: ваш запрос попадёт специалисту по системным структурам ЖКХ, банковского сектора и других направлений, который при необходимости скорректирует формулировки."
         },
       ],
     },
@@ -1709,23 +1709,23 @@ const I18N = {
       sendError: "Send failed. Please try again later.",
     },
     faq: {
-      title: "FAQ — частые вопросы",
+      title: "FAQ — frequently asked questions",
       items: [
         {
-          q: "Что делать после получения документа?",
-          a: "Внимательно проверьте свои данные, распечатайте документ (или сохраните PDF) и следуйте инструкции по отправке, указанной в тексте письма."
+          q: "What should I do after receiving the document?",
+          a: "Carefully check your details, print the document (or save the PDF) and follow the sending instructions described in the letter."
         },
         {
-          q: "Куда отправлять запрос?",
-          a: "В адрес управляющей компании, ресурсоснабжающей организации, банка или другой структуры, которая указана в шапке документа. Способ отправки — личный приём, заказное письмо с уведомлением или через официальный онлайн‑кабинет, если он предусмотрен."
+          q: "Where should I send the request?",
+          a: "To the management company, utility provider, bank or other institution specified in the document header. Sending options include in‑person submission, registered mail with notification, or an official online account if available."
         },
         {
-          q: "Как понять, что документ сработал?",
-          a: "Вы получите официальный ответ от организации или увидите изменения в начислениях/действиях. Отслеживайте сроки ответа, указанные в законодательстве, и сверяйте результат с поставленной целью обращения."
+          q: "How do I know if the document worked?",
+          a: "You will receive an official response from the organization or see changes in charges/actions. Track response deadlines defined by law and compare the result with the goal of your request."
         },
         {
-          q: "Как получить помощь эксперта?",
-          a: "При оформлении заказа выберите тариф с проверкой эксперта: ваш запрос попадёт специалисту по системным структурам ЖКХ, банковского сектора и других направлений, который проверит формулировки и при необходимости даст комментарии."
+          q: "How can I get expert help?",
+          a: "When placing an order, select the plan with expert review: your request will be checked by specialists experienced with housing and utilities systems, the banking sector and other institutional domains, who will adjust wording if needed."
         },
       ],
     },
