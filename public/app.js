@@ -651,8 +651,12 @@ async function ordersApi(method, body = {}) {
   } else {
     throw new Error('Необходима авторизация');
   }
-  if (method === 'GET' && payload.initData) {
-    url += '?initData=' + encodeURIComponent(payload.initData);
+  if (method === 'GET') {
+    const params = new URLSearchParams();
+    if (payload.initData) params.set('initData', payload.initData);
+    if (payload.resource) params.set('resource', payload.resource);
+    const qs = params.toString();
+    if (qs) url += '?' + qs;
   }
   const res = await fetch(url, {
     method,
