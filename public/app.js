@@ -2639,14 +2639,20 @@ async function applyPaymentReturn() {
     hidePaymentReturnLoader();
     return;
   }
-  const t = I18N[state.lang].constructor;
+  const isRu = state.lang === 'ru';
+  const successMsg = isRu
+    ? 'Оплата прошла. Средства зачислены на ваш баланс BYE.'
+    : 'Payment successful. Funds have been credited to your BYE balance.';
+  const errorMsg = isRu
+    ? 'Ошибка оплаты. Средства не были зачислены на баланс.'
+    : 'Payment failed. No funds were credited to the balance.';
   window.history.replaceState(null, '', window.location.pathname + '#balance');
   window.location.hash = '#balance';
-  let msg = t.paymentError;
+  let msg = errorMsg;
   try {
     if (payment === 'success') {
       const data = await syncPaymentApi();
-      msg = data.synced ? t.paymentSuccess : t.paymentError;
+      msg = data.synced ? successMsg : errorMsg;
       if (typeof data.balance === 'number' && state.user) {
         state.user = { ...state.user, balance: data.balance };
         localStorage.setItem('user', JSON.stringify(state.user));
