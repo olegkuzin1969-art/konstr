@@ -2217,7 +2217,7 @@ function showPaymentModal() {
   box.innerHTML = `
     <h3 class="preview-title" style="margin-top:0">${t.payModalTitle}</h3>
     <p class="small muted-text" style="margin-bottom:12px">${t.checkDataBeforePay}</p>
-    <div class="preview-letter" style="background:#f5f5f5;padding:12px;border-radius:8px;margin-bottom:16px;max-height:240px;overflow:auto;">
+    <div class="preview-letter" style="padding:12px;border-radius:8px;margin-bottom:16px;max-height:240px;overflow:auto;">
       <pre style="white-space:pre-wrap;font-family:system-ui,sans-serif;font-size:13px;margin:0">${escapeHtml(letter)}</pre>
     </div>
     <div class="stacked-label" style="margin-bottom:6px">${t.receiptEmailLabel}</div>
@@ -2297,7 +2297,7 @@ function showBalancePaymentModal(orderData) {
   box.innerHTML = `
     <h3 class="preview-title" style="margin-top:0">${t.payModalTitle}</h3>
     <p class="small muted-text" style="margin-bottom:12px">${t.checkDataBeforePay}</p>
-    <div class="preview-letter" style="background:#f5f5f5;padding:12px;border-radius:8px;margin-bottom:16px;max-height:240px;overflow:auto;">
+    <div class="preview-letter" style="padding:12px;border-radius:8px;margin-bottom:16px;max-height:240px;overflow:auto;">
       <pre style="white-space:pre-wrap;font-family:system-ui,sans-serif;font-size:13px;margin:0">${escapeHtml(letter)}</pre>
     </div>
     <div class="stacked-label" style="margin-bottom:6px">${t.receiptEmailLabel}</div>
