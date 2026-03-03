@@ -76,6 +76,7 @@ const state = {
   isAdmin: false,
   adminOrders: [],
   adminTemplates: [],
+  adminUsers: [],
 };
 
 // ========== AUTH (TMA + Telegram Widget → Supabase, 1 аккаунт по telegram_id) ==========
@@ -845,6 +846,21 @@ async function resetAdminTexts() {
   await adminOrdersApi('DELETE', { resource: 'texts' });
 }
 
+async function fetchAdminUsers() {
+  const data = await adminOrdersApi('GET', { resource: 'users' });
+  return data.users || [];
+}
+
+async function fetchAdminUserOperations(userId) {
+  const data = await adminOrdersApi('GET', { resource: 'user_balance_ops', user_id: userId });
+  return data.operations || [];
+}
+
+async function changeAdminUserBalance(userId, deltaBye, description) {
+  const data = await adminOrdersApi('POST', { resource: 'user_balance', user_id: userId, delta_bye: deltaBye, description });
+  return data;
+}
+
 async function checkAdminStatus() {
   try {
     await adminOrdersApi('GET');
@@ -1492,6 +1508,7 @@ const I18N = {
       tabPricing: "Цена",
       tabAppearance: "Оформление",
       tabTexts: "Текст",
+      tabUsers: "Баланс пользователей",
       tabPricing: "Цена",
       priceBaseLabel: "Базовый тариф (BYE)",
       priceExpertLabel: "Тариф с экспертом (BYE)",
@@ -2014,6 +2031,7 @@ Keys <code>footer.linkCodeUrl</code>, <code>footer.linkDeclarationUrl</code>, <c
       tabPricing: "Pricing",
       tabAppearance: "Appearance",
       tabTexts: "Text",
+      tabUsers: "User balances",
       tabPricing: "Pricing",
       priceBaseLabel: "Base tariff (BYE)",
       priceExpertLabel: "Expert tariff (BYE)",
@@ -4066,6 +4084,7 @@ async function renderAdmin() {
   let pricing = state.adminPricing;
   let appearance = state.adminAppearance;
   let texts = state.adminTexts;
+  let users = state.adminUsers;
   let loading = false;
   try {
     loading = true;
@@ -4078,6 +4097,9 @@ async function renderAdmin() {
     } else if (tab === 'appearance') {
       appearance = await fetchAdminAppearance();
       state.adminAppearance = appearance;
+    } else if (tab === 'users') {
+      users = await fetchAdminUsers();
+      state.adminUsers = users;
     } else if (tab === 'texts') {
       texts = await fetchAdminTexts();
       state.adminTexts = texts;
@@ -4136,6 +4158,7 @@ async function renderAdmin() {
             <button class="profile-tab-btn ${tab === 'pricing' ? 'active' : ''}" data-tab="pricing">${t.tabPricing}</button>
             <button class="profile-tab-btn ${tab === 'appearance' ? 'active' : ''}" data-tab="appearance">${t.tabAppearance}</button>
             <button class="profile-tab-btn ${tab === 'texts' ? 'active' : ''}" data-tab="texts">${t.tabTexts}</button>
+            <button class="profile-tab-btn ${tab === 'users' ? 'active' : ''}" data-tab="users">${t.tabUsers}</button>
           </div>
           <div id="admin-orders-list" style="${tab === 'orders' ? '' : 'display:none'}"></div>
           <div id="admin-templates-list" style="${tab === 'templates' ? '' : 'display:none'}">
@@ -4157,6 +4180,7 @@ async function renderAdmin() {
               <button type="button" class="primary-btn" id="admin-save-prices">${t.savePrices}</button>
             </div>
           </div>
+          <div id="admin-users-list" style="${tab === 'users' ? '' : 'display:none'}"></div>
           <div id="admin-appearance-list" style="${tab === 'appearance' ? '' : 'display:none'}">
             <div class="neo-card" style="max-width:520px;padding:20px">
               <h3 class="section-title" style="font-size:18px;margin-top:0;margin-bottom:16px">${t.appearanceTitle}</h3>
@@ -4193,6 +4217,10 @@ async function renderAdmin() {
               <div class="field" style="margin-bottom:16px">
                 <label class="stacked-label" for="theme-border">${t.themeBorderLabel}</label>
                 <input type="color" id="theme-border" value="${escapeHtml(String((appearance && appearance.border_color) || '#cfd8e7'))}" />
+              </div>
+              <div class="field" style="margin-bottom:12px">
+                <label class="stacked-label" for="theme-card-bg">Фон карточек (card)</label>
+                <input type="color" id="theme-card-bg" value="${escapeHtml(String((appearance && appearance.card_bg) || '#ffffff'))}" />
               </div>
               <div class="field" style="margin-bottom:12px">
                 <label class="stacked-label" for="theme-tabs-bg">Фон вкладок/панелей</label>
@@ -4434,14 +4462,15 @@ async function renderAdmin() {
         const gradTo = document.getElementById('theme-grad-to')?.value || '';
         const accent = document.getElementById('theme-accent')?.value || '';
         const border = document.getElementById('theme-border')?.value || '';
-      const headerBg = document.getElementById('theme-header-bg')?.value || '';
-      const footerBg = document.getElementById('theme-footer-bg')?.value || '';
-      const tabsBg = document.getElementById('theme-tabs-bg')?.value || '';
-      const previewBg = document.getElementById('theme-preview-bg')?.value || '';
-      const primaryBtnBg = document.getElementById('theme-primary-btn-bg')?.value || '';
-      const primaryBtnText = document.getElementById('theme-primary-btn-text')?.value || '';
-      const secondaryBtnBg = document.getElementById('theme-secondary-btn-bg')?.value || '';
-      const secondaryBtnText = document.getElementById('theme-secondary-btn-text')?.value || '';
+        const headerBg = document.getElementById('theme-header-bg')?.value || '';
+        const footerBg = document.getElementById('theme-footer-bg')?.value || '';
+        const cardBg = document.getElementById('theme-card-bg')?.value || '';
+        const tabsBg = document.getElementById('theme-tabs-bg')?.value || '';
+        const previewBg = document.getElementById('theme-preview-bg')?.value || '';
+        const primaryBtnBg = document.getElementById('theme-primary-btn-bg')?.value || '';
+        const primaryBtnText = document.getElementById('theme-primary-btn-text')?.value || '';
+        const secondaryBtnBg = document.getElementById('theme-secondary-btn-bg')?.value || '';
+        const secondaryBtnText = document.getElementById('theme-secondary-btn-text')?.value || '';
         try {
           const updated = await updateAdminAppearance({
             bg_color: bg,
@@ -4452,6 +4481,7 @@ async function renderAdmin() {
             border_color: border,
           header_bg: headerBg,
           footer_bg: footerBg,
+          card_bg: cardBg,
           tabs_bg: tabsBg,
           preview_bg: previewBg,
           primary_btn_bg: primaryBtnBg,
@@ -4479,6 +4509,128 @@ async function renderAdmin() {
           alert((t.pricesError || 'Ошибка') + ': ' + (e?.message || ''));
         }
       });
+    }
+    return;
+  }
+
+  if (tab === 'users') {
+    const listEl = document.getElementById('admin-users-list');
+    if (listEl) {
+      if (!users || users.length === 0) {
+        listEl.innerHTML = `<p class="small muted-text">${state.lang === 'ru' ? 'Пользователи не найдены.' : 'No users found.'}</p>`;
+      } else {
+        listEl.innerHTML = users.map((u) => {
+          const name = formatUser(u);
+          const balance = Number(u.balance || 0);
+          const created = u.created_at ? new Date(u.created_at).toLocaleString(state.lang === 'ru' ? 'ru-RU' : 'en-US') : '';
+          const id = String(u.id);
+          return `
+            <div class="neo-card" style="margin-bottom:10px;padding:10px 12px;" data-user-id="${id}">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:220px;">
+                  <div style="font-weight:600">${escapeHtml(name)}</div>
+                  <div class="small muted-text">${escapeHtml(u.username ? '@' + u.username : '')}</div>
+                  <div class="small muted-text">${state.lang === 'ru' ? 'Создан:' : 'Created:'} ${escapeHtml(created)}</div>
+                </div>
+                <div style="text-align:right;min-width:160px;">
+                  <div class="small muted-text">${state.lang === 'ru' ? 'Баланс BYE' : 'BYE balance'}</div>
+                  <div style="font-weight:700;">${balance.toLocaleString(state.lang === 'ru' ? 'ru-RU' : 'en-US')} BYE</div>
+                  <button type="button" class="secondary-btn admin-user-toggle" data-user-id="${id}" style="margin-top:4px;">+</button>
+                </div>
+              </div>
+              <div class="admin-user-details" style="display:none;margin-top:10px;border-top:1px solid rgba(207,216,231,0.6);padding-top:10px;">
+                <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;">
+                  <div class="field" style="flex:0 0 120px;">
+                    <label class="stacked-label">${state.lang === 'ru' ? 'Изменить на (BYE)' : 'Change by (BYE)'}</label>
+                    <input type="number" step="1" class="input admin-user-delta" data-user-id="${id}" value="0" />
+                  </div>
+                  <div class="field" style="flex:1;min-width:180px;">
+                    <label class="stacked-label">${state.lang === 'ru' ? 'Описание операции' : 'Operation description'}</label>
+                    <input type="text" class="input admin-user-comment" data-user-id="${id}" placeholder="${state.lang === 'ru' ? 'Например: корректировка баланса' : 'e.g. balance adjustment'}" />
+                  </div>
+                  <div class="field" style="align-self:flex-end;">
+                    <button type="button" class="primary-btn admin-user-apply" data-user-id="${id}">${state.lang === 'ru' ? 'Применить' : 'Apply'}</button>
+                  </div>
+                </div>
+                <div class="small muted-text" style="margin-bottom:6px;">${state.lang === 'ru' ? 'История операций' : 'Operations history'}</div>
+                <div class="small" id="admin-user-ops-${id}" data-user-id="${id}">
+                  ${state.lang === 'ru' ? 'Загрузка…' : 'Loading…'}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        listEl.querySelectorAll('.admin-user-toggle').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const uid = btn.getAttribute('data-user-id');
+            const card = btn.closest('[data-user-id]');
+            if (!uid || !card) return;
+            const details = card.querySelector('.admin-user-details');
+            if (!details) return;
+            const visible = details.style.display !== 'none';
+            if (visible) {
+              details.style.display = 'none';
+              return;
+            }
+            details.style.display = '';
+            const opsEl = details.querySelector(`#admin-user-ops-${uid}`);
+            if (!opsEl) return;
+            opsEl.textContent = state.lang === 'ru' ? 'Загрузка…' : 'Loading…';
+            try {
+              const data = await fetchAdminUserOperations(uid);
+              const ops = data || [];
+              if (!ops.length) {
+                opsEl.textContent = state.lang === 'ru' ? 'Операций пока нет.' : 'No operations yet.';
+              } else {
+                opsEl.innerHTML = ops.map((op) => {
+                  const amount = Number(op.amount_bye || 0);
+                  const sign = amount > 0 ? '+' : '';
+                  const byeStr = `${sign}${amount} BYE`;
+                  const d = op.created_at ? new Date(op.created_at).toLocaleString(state.lang === 'ru' ? 'ru-RU' : 'en-US') : '';
+                  const desc = op.meta?.description || '';
+                  const type = op.type || '';
+                  return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid rgba(207,216,231,0.3);">
+                    <div>
+                      <div>${escapeHtml(type || '')}</div>
+                      <div class="small muted-text">${escapeHtml(d)}</div>
+                      ${desc ? `<div class="small muted-text">${escapeHtml(desc)}</div>` : ''}
+                    </div>
+                    <div style="font-weight:600;${amount>0 ? 'color:var(--accent);' : ''}">${escapeHtml(byeStr)}</div>
+                  </div>`;
+                }).join('');
+              }
+            } catch (e) {
+              opsEl.textContent = (state.lang === 'ru' ? 'Ошибка: ' : 'Error: ') + (e?.message || '');
+            }
+          });
+        });
+
+        listEl.querySelectorAll('.admin-user-apply').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const uid = btn.getAttribute('data-user-id');
+            if (!uid) return;
+            const deltaInput = listEl.querySelector(`.admin-user-delta[data-user-id="${uid}"]`);
+            const commentInput = listEl.querySelector(`.admin-user-comment[data-user-id="${uid}"]`);
+            const delta = parseInt(deltaInput?.value, 10);
+            const comment = commentInput?.value?.trim() || '';
+            if (!Number.isFinite(delta) || delta === 0) {
+              alert(state.lang === 'ru' ? 'Укажите ненулевое целое изменение баланса.' : 'Enter a non-zero integer delta.');
+              deltaInput?.focus();
+              return;
+            }
+            try {
+              const result = await changeAdminUserBalance(uid, delta, comment);
+              const updatedUser = result.user;
+              const updatedUsers = (state.adminUsers || []).map((u) => (u.id === updatedUser.id ? { ...u, balance: updatedUser.balance } : u));
+              state.adminUsers = updatedUsers;
+              renderAdmin();
+            } catch (e) {
+              alert((state.lang === 'ru' ? 'Ошибка: ' : 'Error: ') + (e?.message || ''));
+            }
+          });
+        });
+      }
     }
     return;
   }

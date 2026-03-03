@@ -397,6 +397,80 @@ module.exports = async function handler(req, res) {
       return res.status(405).end();
     }
 
+    // ===== Users & balances (таблица users + balance_operations) =====
+    if (resource === 'users') {
+      if (req.method === 'GET') {
+        const { data: users, error } = await supabase
+          .from('users')
+          .select('id, telegram_id, first_name, last_name, username, balance, administrator, created_at')
+          .order('created_at', { ascending: false });
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(200).json({ users: users || [] });
+      }
+      return res.status(405).end();
+    }
+
+    if (resource === 'user_balance_ops') {
+      if (req.method === 'GET') {
+        const uid = body.user_id || query.user_id;
+        if (!uid) return res.status(400).json({ error: 'user_id обязателен' });
+        const { data, error } = await supabase
+          .from('balance_operations')
+          .select('id, amount_bye, type, meta, created_at')
+          .eq('user_id', uid)
+          .order('created_at', { ascending: false });
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(200).json({ operations: data || [] });
+      }
+      return res.status(405).end();
+    }
+
+    if (resource === 'user_balance') {
+      if (req.method === 'POST') {
+        const uid = body.user_id;
+        const rawDelta = body.delta_bye;
+        const description = body.description ? String(body.description).trim() : '';
+        const delta = Number(rawDelta);
+        if (!uid) return res.status(400).json({ error: 'user_id обязателен' });
+        if (!Number.isFinite(delta) || !Number.isInteger(delta) || delta === 0) {
+          return res.status(400).json({ error: 'delta_bye должен быть ненулевым целым числом' });
+        }
+
+        const { data: userRow, error: userErr } = await supabase
+          .from('users')
+          .select('id, balance')
+          .eq('id', uid)
+          .single();
+        if (userErr || !userRow) return res.status(404).json({ error: 'Пользователь не найден' });
+
+        const current = Number(userRow.balance || 0);
+        const next = current + delta;
+
+        const { data: updatedUser, error: updErr } = await supabase
+          .from('users')
+          .update({ balance: next })
+          .eq('id', uid)
+          .select('id, telegram_id, first_name, last_name, username, balance, administrator, created_at')
+          .single();
+        if (updErr) return res.status(500).json({ error: updErr.message });
+
+        const meta = {
+          description: description || null,
+          admin_id: userId,
+        };
+        const { error: opErr } = await supabase.from('balance_operations').insert({
+          user_id: uid,
+          amount_bye: delta,
+          type: 'admin_adjustment',
+          meta,
+        });
+        if (opErr) return res.status(500).json({ error: opErr.message });
+
+        return res.status(200).json({ user: updatedUser });
+      }
+      return res.status(405).end();
+    }
+
     if (req.method === 'GET') {
       const { data: orders, error } = await supabase
         .from('orders')
