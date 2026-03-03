@@ -85,29 +85,48 @@ module.exports = async function handler(req, res) {
     const userId = await resolveUserId({ body, headers: req.headers });
     if (!userId) return res.status(401).json({ error: 'Необходима авторизация' });
 
-    const orderData = body.orderData;
-    const withExpert = !!body.withExpert;
-    if (!orderData || typeof orderData !== 'object') return res.status(400).json({ error: 'Некорректные данные заказа' });
-
+    const mode = body.mode === 'balance' ? 'balance' : 'order';
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let amountRub = withExpert ? 2200 : 700;
-    try {
-      const { data: pricingRow } = await supabase
-        .from('pricing')
-        .select('base_price_rub, expert_price_rub')
-        .eq('id', 1)
-        .single();
-      if (pricingRow) {
-        const base = Number(pricingRow.base_price_rub);
-        const expert = Number(pricingRow.expert_price_rub);
-        if (Number.isFinite(base) && base > 0 && Number.isInteger(base) &&
-            Number.isFinite(expert) && expert > 0 && Number.isInteger(expert)) {
-          amountRub = withExpert ? expert : base;
-        }
+    let amountRub = 0;
+    let purpose = 'order';
+    let metaDescription = 'Заказ запроса ст. 165 ЖК РФ';
+    let orderData = null;
+    let withExpert = false;
+
+    if (mode === 'balance') {
+      const rawAmount = Number(body.amountBye);
+      if (!Number.isFinite(rawAmount) || rawAmount <= 0 || !Number.isInteger(rawAmount)) {
+        return res.status(400).json({ error: 'Некорректная сумма пополнения' });
       }
-    } catch {
-      // fallback to default prices if pricing not available
+      amountRub = rawAmount;
+      purpose = 'balance';
+      metaDescription = 'Пополнение баланса BYE';
+    } else {
+      orderData = body.orderData;
+      withExpert = !!body.withExpert;
+      if (!orderData || typeof orderData !== 'object') {
+        return res.status(400).json({ error: 'Некорректные данные заказа' });
+      }
+
+      amountRub = withExpert ? 2200 : 700;
+      try {
+        const { data: pricingRow } = await supabase
+          .from('pricing')
+          .select('base_price_rub, expert_price_rub')
+          .eq('id', 1)
+          .single();
+        if (pricingRow) {
+          const base = Number(pricingRow.base_price_rub);
+          const expert = Number(pricingRow.expert_price_rub);
+          if (Number.isFinite(base) && base > 0 && Number.isInteger(base) &&
+              Number.isFinite(expert) && expert > 0 && Number.isInteger(expert)) {
+            amountRub = withExpert ? expert : base;
+          }
+        }
+      } catch {
+        // fallback to default prices if pricing not available
+      }
     }
 
     const amountKop = amountRub * 100;
@@ -116,10 +135,11 @@ module.exports = async function handler(req, res) {
       .from('payment_intents')
       .insert({
         user_id: userId,
-        order_data: { ...orderData, withExpert },
+        order_data: orderData ? { ...orderData, withExpert } : null,
         with_expert: withExpert,
         amount_kop: amountKop,
         status: 'pending',
+        purpose,
       })
       .select('id')
       .single();
@@ -142,7 +162,9 @@ module.exports = async function handler(req, res) {
       customer: { email: customerEmail },
       items: [
         {
-          description: withExpert ? 'Запрос в УК с проверкой эксперта' : 'Запрос в УК ст. 165 ЖК РФ',
+          description: mode === 'balance'
+            ? 'Пополнение баланса BYE'
+            : (withExpert ? 'Запрос в УК с проверкой эксперта' : 'Запрос в УК ст. 165 ЖК РФ'),
           quantity: '1',
           amount: { value: valueStr, currency: 'RUB' },
           vat_code: 1,
@@ -156,7 +178,7 @@ module.exports = async function handler(req, res) {
       amount: { value: valueStr, currency: 'RUB' },
       capture: true,
       confirmation: { type: 'redirect', return_url: returnUrl },
-      description: 'Заказ запроса ст. 165 ЖК РФ',
+      description: metaDescription,
       metadata: { payment_intent_id: intent.id },
       receipt,
     };

@@ -669,6 +669,11 @@ async function fetchOrders() {
   return data.orders || [];
 }
 
+async function fetchBalanceOperations() {
+  const data = await ordersApi('GET', { resource: 'balance_ops' });
+  return data.operations || [];
+}
+
 async function createOrderApi(orderData) {
   const data = await ordersApi('POST', { data: orderData });
   return data.order;
@@ -676,7 +681,7 @@ async function createOrderApi(orderData) {
 
 async function createPaymentApi(orderData, withExpert, receiptEmail) {
   const headers = { 'Content-Type': 'application/json' };
-  const payload = { orderData: { ...orderData, withExpert }, withExpert, receiptEmail };
+  const payload = { orderData: { ...orderData, withExpert }, withExpert, receiptEmail, mode: 'order' };
   if (isInTelegramWebApp() && window.Telegram?.WebApp?.initData) {
     payload.initData = window.Telegram.WebApp.initData;
   } else if (state.token) {
@@ -1539,6 +1544,7 @@ const I18N = {
       title: "Профиль",
       tabDrafts: "Черновики",
       tabOrders: "Заказы",
+      tabBalance: "Баланс",
       subtitle: "Сохранённые обращения в Конструкторе. Нажмите, чтобы продолжить редактирование.",
       empty: "Нет сохранённых черновиков.",
       ordersEmpty: "Нет заказов.",
@@ -2060,6 +2066,7 @@ Keys <code>footer.linkCodeUrl</code>, <code>footer.linkDeclarationUrl</code>, <c
       title: "Profile",
       tabDrafts: "Drafts",
       tabOrders: "Orders",
+      tabBalance: "Balance",
       subtitle: "Saved requests in the Constructor. Click to continue editing.",
       empty: "No saved drafts.",
       ordersEmpty: "No orders.",
@@ -2255,10 +2262,33 @@ async function createOrder() {
       window.location.hash = '#profile';
       render();
     } else {
-      showPaymentModal();
+      const order = await createOrderApi(orderData);
+      clearConstructorForm();
+      state.profileOrders = [order, ...(state.profileOrders || [])];
+      if (typeof order.balance === 'number') {
+        state.user = { ...(state.user || {}), balance: order.balance };
+        localStorage.setItem('user', JSON.stringify(state.user));
+        updateHeaderBalance();
+      }
+      alert(state.lang === 'ru'
+        ? 'Заказ создан и оплачен с баланса BYE.'
+        : 'Order created and paid from BYE balance.');
+      window.location.hash = '#profile';
+      render();
     }
   } catch (e) {
-    alert(state.lang === 'ru' ? 'Ошибка: ' + (e.message || 'Проверьте подключение') : 'Error: ' + (e.message || 'Check connection'));
+    const msg = e?.message || '';
+    if (msg.includes('Недостаточно средств')) {
+      alert(state.lang === 'ru'
+        ? 'Недостаточно средств на балансе BYE. Пополните баланс во вкладке «Баланс».'
+        : 'Insufficient BYE balance. Please top up on the Balance page.');
+      window.location.hash = '#balance';
+      render();
+    } else {
+      alert(state.lang === 'ru'
+        ? 'Ошибка: ' + (msg || 'Проверьте подключение')
+        : 'Error: ' + (msg || 'Check connection'));
+    }
   }
 }
 
@@ -2602,16 +2632,21 @@ async function applyPaymentReturn() {
     return;
   }
   const t = I18N[state.lang].constructor;
-  window.history.replaceState(null, '', window.location.pathname + '#profile');
-  window.location.hash = '#profile';
+  window.history.replaceState(null, '', window.location.pathname + '#balance');
+  window.location.hash = '#balance';
   let msg = t.paymentError;
   try {
     if (payment === 'success') {
       const data = await syncPaymentApi();
       msg = data.synced ? t.paymentSuccess : t.paymentError;
+      if (typeof data.balance === 'number' && state.user) {
+        state.user = { ...state.user, balance: data.balance };
+        localStorage.setItem('user', JSON.stringify(state.user));
+        updateHeaderBalance();
+      }
     }
-    const orders = await fetchOrders().catch(() => []);
-    state.profileOrders = orders || [];
+    const ops = await fetchBalanceOperations().catch(() => []);
+    state.balanceOperations = ops || [];
   } catch (_) {}
   finally {
     hidePaymentReturnLoader();
@@ -2629,6 +2664,8 @@ function render() {
     renderAdmin();
   } else if (hash === "#profile") {
     renderProfile();
+  } else if (hash === "#balance") {
+    renderBalance();
   } else if (hash === "#legal" || hash === "#legal-offer" || hash === "#legal-privacy" || hash === "#legal-codex" || hash === "#legal-declaration") {
     if (hash === "#legal-offer") renderLegalPage("offer");
     else if (hash === "#legal-privacy") renderLegalPage("privacy");
@@ -2747,6 +2784,99 @@ function openFieldHelpModal(key, label) {
   const close = () => overlay.remove();
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   overlay.querySelector('#field-help-close')?.addEventListener('click', close);
+}
+
+function openTopupModal() {
+  const isRu = state.lang === 'ru';
+  const t = I18N[state.lang].constructor;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;box-sizing:border-box;';
+
+  const base = Number(state.pricing?.base_price_rub || 700);
+  const expert = Number(state.pricing?.expert_price_rub || 2200);
+
+  overlay.innerHTML = `
+    <div class="modal-content" style="max-width:420px;">
+      <h3 class="modal-title">${isRu ? 'Пополнить баланс BYE' : 'Top up BYE balance'}</h3>
+      <p class="small muted-text" style="margin-bottom:12px">
+        ${isRu ? 'Выберите фиксированную сумму или введите свою. 1 BYE = 1 ₽.' : 'Choose a fixed amount or enter your own. 1 BYE = 1 RUB.'}
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <button type="button" class="secondary-btn" data-topup-preset="${base}">${base.toLocaleString(isRu ? 'ru-RU' : 'en-US')} BYE</button>
+        <button type="button" class="secondary-btn" data-topup-preset="${expert}">${expert.toLocaleString(isRu ? 'ru-RU' : 'en-US')} BYE</button>
+      </div>
+      <div class="stacked-label">${isRu ? 'Другая сумма' : 'Custom amount'}</div>
+      <input type="number" id="topup-amount" class="input" min="1" step="1" placeholder="${isRu ? 'Введите сумму BYE' : 'Enter amount BYE'}" style="margin-bottom:12px;">
+      <div class="stacked-label" style="margin-bottom:6px">${t.receiptEmailLabel}</div>
+      <input type="email" id="topup-email" class="input" placeholder="${t.receiptEmailPlaceholder}" style="margin-bottom:16px;">
+      <div class="modal-actions">
+        <button type="button" class="secondary-btn" id="topup-cancel">${t.cancel}</button>
+        <button type="button" class="primary-btn" id="topup-submit">${isRu ? 'Пополнить' : 'Top up'}</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  overlay.querySelector('#topup-cancel')?.addEventListener('click', close);
+
+  const amountInput = overlay.querySelector('#topup-amount');
+  const emailInput = overlay.querySelector('#topup-email');
+
+  overlay.querySelectorAll('[data-topup-preset]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const v = btn.getAttribute('data-topup-preset');
+      if (amountInput) amountInput.value = v || '';
+    });
+  });
+
+  overlay.querySelector('#topup-submit')?.addEventListener('click', async () => {
+    const raw = amountInput?.value?.trim() || '';
+    const amount = Number(raw);
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isInteger(amount)) {
+      alert(isRu ? 'Введите корректную сумму BYE (целое число).' : 'Enter a valid BYE amount (integer).');
+      amountInput?.focus();
+      return;
+    }
+    const email = emailInput?.value?.trim() || '';
+    if (!email) {
+      alert(isRu ? 'Укажите email для чека.' : 'Enter email for receipt.');
+      emailInput?.focus();
+      return;
+    }
+    const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+    if (!emailRegex.test(email)) {
+      alert(isRu ? 'Укажите корректный email (например example@mail.ru).' : 'Enter a valid email (e.g. example@mail.com).');
+      emailInput?.focus();
+      return;
+    }
+
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      const payload = { mode: 'balance', amountBye: amount, receiptEmail: email };
+      if (isInTelegramWebApp() && window.Telegram?.WebApp?.initData) {
+        payload.initData = window.Telegram.WebApp.initData;
+      } else if (state.token) {
+        headers['Authorization'] = 'Bearer ' + state.token;
+      } else {
+        throw new Error(isRu ? 'Необходима авторизация' : 'Authorization required');
+      }
+      const res = await fetch(API_BASE + '/api/create-payment', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Ошибка создания платежа');
+      const url = data.confirmation_url;
+      if (!url) throw new Error('Нет ссылки на оплату');
+      window.location.href = url;
+    } catch (e) {
+      alert(isRu ? ('Ошибка: ' + (e.message || 'Проверьте подключение')) : ('Error: ' + (e.message || 'Check connection')));
+    }
+  });
 }
 
 function openNavInstructionModal() {
@@ -3439,6 +3569,87 @@ async function deleteOrder(id) {
         if (ordersEl) ordersEl.style.display = '';
       }
     });
+  });
+}
+
+async function renderBalance() {
+  if (!state.user) {
+    window.location.hash = '#profile';
+    render();
+    return;
+  }
+
+  const isRu = state.lang === 'ru';
+  const bye = formatBalanceBye(state.user.balance ?? 0);
+
+  appRoot.innerHTML = `
+    <div class="landing">
+      <section id="balance" class="section hero-section section-visible">
+        <div class="neo-card section-shell" style="align-items:center;text-align:center">
+          <h2 class="section-title">${isRu ? 'Баланс' : 'Balance'}</h2>
+          <div style="font-size:32px;font-weight:700;color:var(--accent);margin:8px 0 4px;">${bye}</div>
+          <p class="small muted-text" style="margin-bottom:24px;">
+            ${isRu ? 'Внутренняя валюта BYE используется для оплаты заказов.' : 'Internal BYE currency is used to pay for orders.'}
+          </p>
+          <div class="btn-row" style="justify-content:center;gap:8px;flex-wrap:wrap;">
+            <button class="secondary-btn" id="balance-history-btn">${isRu ? 'История операций' : 'History'}</button>
+            <button class="primary-btn" id="balance-topup-btn">${isRu ? 'Пополнить' : 'Top up'}</button>
+          </div>
+          <div id="balance-history" style="margin-top:20px;max-width:640px;width:100%;display:none;text-align:left">
+            <h3 class="section-title" style="font-size:14px;margin-bottom:8px">${isRu ? 'История операций' : 'History'}</h3>
+            <div id="balance-history-list" class="small muted-text">
+              ${isRu ? 'Загрузка…' : 'Loading…'}
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  `;
+
+  const historyBtn = document.getElementById('balance-history-btn');
+  const topupBtn = document.getElementById('balance-topup-btn');
+  const historyBlock = document.getElementById('balance-history');
+  const historyList = document.getElementById('balance-history-list');
+
+  historyBtn?.addEventListener('click', async () => {
+    if (!historyBlock) return;
+    const isVisible = historyBlock.style.display !== 'none';
+    if (isVisible) {
+      historyBlock.style.display = 'none';
+      return;
+    }
+    historyBlock.style.display = '';
+    try {
+      const ops = await fetchBalanceOperations();
+      state.balanceOperations = ops || [];
+      if (!ops || ops.length === 0) {
+        historyList.textContent = isRu ? 'Операций пока нет.' : 'No operations yet.';
+        return;
+      }
+      historyList.innerHTML = ops.map((op) => {
+        const amount = Number(op.amount_bye || 0);
+        const sign = amount > 0 ? '+' : '';
+        const byeStr = `${sign}${amount} BYE`;
+        const d = op.created_at ? new Date(op.created_at) : null;
+        const dateStr = d ? d.toLocaleString(isRu ? 'ru-RU' : 'en-US') : '';
+        const typeLabel = op.type === 'topup_yookassa'
+          ? (isRu ? 'Пополнение' : 'Top up')
+          : (isRu ? 'Оплата заказа' : 'Order payment');
+        return `<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid rgba(207,216,231,0.6);">
+          <div>
+            <div>${typeLabel}</div>
+            <div class="small muted-text">${dateStr}</div>
+          </div>
+          <div style="font-weight:600;${amount>0 ? 'color:var(--accent);' : ''}">${byeStr}</div>
+        </div>`;
+      }).join('');
+    } catch {
+      historyList.textContent = isRu ? 'Не удалось загрузить историю.' : 'Failed to load history.';
+    }
+  });
+
+  topupBtn?.addEventListener('click', () => {
+    openTopupModal();
   });
 }
 
@@ -4711,6 +4922,7 @@ function updateProfileUI() {
         </div>
       </div>
       <button class="profile-menu-item" onclick="goToDashboard()">${state.lang === 'ru' ? 'Профиль' : 'Profile'}</button>
+      <button class="profile-menu-item" onclick="goToBalance()">${state.lang === 'ru' ? 'Баланс' : 'Balance'}</button>
       <button class="profile-menu-item logout" onclick="logout()">${state.lang === 'ru' ? 'Выйти' : 'Logout'}</button>
       <button class="profile-menu-item logout" style="margin-top:8px;color:var(--danger);" onclick="deleteAccount()">
         ${state.lang === 'ru' ? 'Удалить аккаунт' : 'Delete account'}
@@ -4782,6 +4994,12 @@ function goToDashboard() {
   closeProfileDropdown();
   prefetchProfileData();
   window.location.hash = '#profile';
+  render();
+}
+
+function goToBalance() {
+  closeProfileDropdown();
+  window.location.hash = '#balance';
   render();
 }
 

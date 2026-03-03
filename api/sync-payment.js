@@ -84,7 +84,7 @@ module.exports = async function handler(req, res) {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data: intents } = await supabase
       .from('payment_intents')
-      .select('id, user_id, order_data, with_expert, yookassa_payment_id, status')
+      .select('id, user_id, order_data, with_expert, yookassa_payment_id, status, amount_kop, purpose')
       .eq('user_id', userId)
       .eq('status', 'pending')
       .not('yookassa_payment_id', 'is', null)
@@ -113,20 +113,53 @@ module.exports = async function handler(req, res) {
         .eq('status', 'pending')
         .select('id');
       if (lockErr || !lockedRows || lockedRows.length === 0) continue;
-
-      const approved = intent.with_expert ? null : true;
-      const { error: orderError } = await supabase.from('orders').insert({
-        user_id: intent.user_id,
-        data: intent.order_data,
-        approved,
-        revision_comment: '',
-      });
-      if (orderError) {
-        console.error('sync-payment order insert:', orderError);
-        await supabase.from('payment_intents').update({ status: 'pending' }).eq('id', intent.id);
-        continue;
+      
+      if (intent.purpose === 'balance') {
+        const amountBye = Math.round((intent.amount_kop || 0) / 100);
+        let next = null;
+        if (amountBye > 0) {
+          const { data: userRow, error: userErr } = await supabase
+            .from('users')
+            .select('balance')
+            .eq('id', intent.user_id)
+            .single();
+          if (userErr) {
+            console.error('sync-payment load user balance error:', userErr);
+          } else {
+            const current = Number(userRow?.balance || 0);
+            next = current + amountBye;
+            const { error: balErr } = await supabase
+              .from('users')
+              .update({ balance: next })
+              .eq('id', intent.user_id);
+            if (balErr) {
+              console.error('sync-payment balance update error:', balErr);
+            } else {
+              await supabase.from('balance_operations').insert({
+                user_id: intent.user_id,
+                amount_bye: amountBye,
+                type: 'topup_yookassa',
+                meta: { payment_intent_id: intent.id, payment_id: payment.id || null },
+              });
+            }
+          }
+        }
+        return res.status(200).json({ synced: true, balance: next });
+      } else {
+        const approved = intent.with_expert ? null : true;
+        const { error: orderError } = await supabase.from('orders').insert({
+          user_id: intent.user_id,
+          data: intent.order_data,
+          approved,
+          revision_comment: '',
+        });
+        if (orderError) {
+          console.error('sync-payment order insert:', orderError);
+          await supabase.from('payment_intents').update({ status: 'pending' }).eq('id', intent.id);
+          continue;
+        }
+        return res.status(200).json({ synced: true });
       }
-      return res.status(200).json({ synced: true });
     }
 
     return res.status(200).json({ synced: false });

@@ -75,7 +75,10 @@ module.exports = async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
     const query = req.query || {};
-    const bodyWithQuery = req.method === 'GET' ? { initData: query.initData } : body;
+    const resource = (query.resource || body.resource || 'orders').toString();
+    const bodyWithQuery = req.method === 'GET'
+      ? { initData: query.initData, resource }
+      : { ...body, resource };
     const userId = await resolveUserId({ body: bodyWithQuery, headers: req.headers });
 
     if (!userId) return res.status(401).json({ error: 'Необходима авторизация' });
@@ -83,6 +86,16 @@ module.exports = async function handler(req, res) {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     if (req.method === 'GET') {
+      if (resource === 'balance_ops') {
+        const { data, error } = await supabase
+          .from('balance_operations')
+          .select('id, amount_bye, type, meta, created_at')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(200).json({ operations: data || [] });
+      }
+
       const { data, error } = await supabase
         .from('orders')
         .select('id, data, approved, revision_comment, created_at')
@@ -93,15 +106,61 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
+      if (resource !== 'orders') return res.status(400).json({ error: 'Unsupported resource' });
       const { data: orderData } = body;
       if (!orderData || typeof orderData !== 'object') return res.status(400).json({ error: 'Некорректные данные заказа' });
       const withExpert = !!orderData.withExpert;
-      // Без проверки — сразу approved=true (можно скачать). С проверкой — approved=null (в работе).
+
+      let amountRub = withExpert ? 2200 : 700;
+      try {
+        const { data: pricingRow } = await supabase
+          .from('pricing')
+          .select('base_price_rub, expert_price_rub')
+          .eq('id', 1)
+          .single();
+        if (pricingRow) {
+          const base = Number(pricingRow.base_price_rub);
+          const expert = Number(pricingRow.expert_price_rub);
+          if (Number.isFinite(base) && base > 0 && Number.isInteger(base) &&
+              Number.isFinite(expert) && expert > 0 && Number.isInteger(expert)) {
+            amountRub = withExpert ? expert : base;
+          }
+        }
+      } catch {
+        // fallback
+      }
+
+      const { data: userRow, error: userErr } = await supabase
+        .from('users')
+        .select('balance')
+        .eq('id', userId)
+        .single();
+      if (userErr) return res.status(500).json({ error: userErr.message });
+      const currentBalance = Number(userRow?.balance || 0);
+      if (currentBalance < amountRub) {
+        return res.status(400).json({ error: 'Недостаточно средств на балансе' });
+      }
+
+      const nextBalance = currentBalance - amountRub;
+      const { error: balErr } = await supabase
+        .from('users')
+        .update({ balance: nextBalance })
+        .eq('id', userId);
+      if (balErr) return res.status(500).json({ error: balErr.message });
+
       const approved = withExpert ? null : true;
       const row = { user_id: userId, data: orderData, approved, revision_comment: '' };
       const { data: inserted, error } = await supabase.from('orders').insert(row).select().single();
       if (error) return res.status(500).json({ error: error.message });
-      return res.status(200).json({ order: inserted });
+
+      await supabase.from('balance_operations').insert({
+        user_id: userId,
+        amount_bye: -amountRub,
+        type: 'order_payment',
+        meta: { order_id: inserted.id || null, with_expert: withExpert },
+      });
+
+      return res.status(200).json({ order: inserted, balance: nextBalance });
     }
 
     if (req.method === 'PUT') {
