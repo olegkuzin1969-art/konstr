@@ -1017,7 +1017,7 @@ html {
   line-height: 2.4;
   font-size: 32px;
   font-weight: 700;
-  color: rgba(139, 92, 246, 0.12);
+  color: rgba(139, 92, 246, 0.2);
   transform: rotate(-30deg);
   pointer-events: none;
   user-select: none;
