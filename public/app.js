@@ -680,7 +680,11 @@ async function fetchBalanceOperations() {
 
 async function createOrderApi(orderData) {
   const data = await ordersApi('POST', { data: orderData });
-  return data.order;
+  const order = data.order || null;
+  if (order && typeof data.balance === 'number') {
+    return { ...order, balance: data.balance };
+  }
+  return order;
 }
 
 async function createPaymentApi(orderData, withExpert, receiptEmail) {
@@ -1153,9 +1157,9 @@ const I18N = {
       payConsentError: "Поставьте галочку согласия на обработку персональных данных.",
       pay: "Оплатить",
       cancel: "Отмена",
-      paymentSuccess: "Оплата прошла. Заказ создан. Присоединяйтесь к нашему сообществу в Telegram: https://t.me/SDTSamara",
-      paymentCancel: "Оплата отменена. Заказ не создан. Присоединяйтесь к нашему сообществу в Telegram: https://t.me/SDTSamara",
-      paymentError: "Ошибка оплаты. Заказ не создан. Присоединяйтесь к нашему сообществу в Telegram: https://t.me/SDTSamara",
+      paymentSuccess: "Оплата прошла. Средства зачислены на ваш баланс BYE.",
+      paymentCancel: "Оплата отменена. Средства не были зачислены на баланс.",
+      paymentError: "Ошибка оплаты. Средства не были зачислены на баланс.",
     },
     blog: {
       title: "Блог о защите прав и ЖКХ",
@@ -1719,9 +1723,9 @@ const I18N = {
       payConsentError: "Please accept personal data processing.",
       pay: "Pay",
       cancel: "Cancel",
-      paymentSuccess: "Payment successful. Order created. Join our Telegram community: https://t.me/SDTSamara",
-      paymentCancel: "Payment cancelled. No order was created. Join our Telegram community: https://t.me/SDTSamara",
-      paymentError: "Payment failed. Order was not created. Join our Telegram community: https://t.me/SDTSamara",
+      paymentSuccess: "Payment successful. Funds have been credited to your BYE balance.",
+      paymentCancel: "Payment cancelled. No funds were credited to the balance.",
+      paymentError: "Payment failed. No funds were credited to the balance.",
     },
     blog: {
       title: "Blog about housing rights",
