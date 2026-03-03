@@ -249,7 +249,7 @@ values
   ('cadastralNumber','Кадастровый номер помещения','Cadastral number',true,250),
   ('contractNumber','Номер договора','Contract number',true,260),
   ('contractDate','Дата договора','Contract date',true,270),
-  ('claimAmount','Сумма требований (руб.)','Claim amount (RUB)',true,280),
+  ('claimAmount','Сумма требований (BYE)','Claim amount (BYE)',true,280),
   ('reason','Основание (причина запроса)','Reason for request',true,290),
   ('deliveryMethod','Способ получения ответа','Response delivery method',true,300)
 on conflict (key) do nothing;

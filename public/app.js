@@ -30,7 +30,7 @@ const PREDEFINED_VARIABLES = [
   { key: 'cadastralNumber', labelRu: 'Кадастровый номер помещения', labelEn: 'Cadastral number' },
   { key: 'contractNumber', labelRu: 'Номер договора', labelEn: 'Contract number' },
   { key: 'contractDate', labelRu: 'Дата договора', labelEn: 'Contract date' },
-  { key: 'claimAmount', labelRu: 'Сумма требований (руб.)', labelEn: 'Claim amount (RUB)' },
+{ key: 'claimAmount', labelRu: 'Сумма требований (BYE)', labelEn: 'Claim amount (BYE)' },
   { key: 'reason', labelRu: 'Основание (причина запроса)', labelEn: 'Reason for request' },
   { key: 'deliveryMethod', labelRu: 'Способ получения ответа', labelEn: 'Response delivery method' },
 ];
@@ -1072,7 +1072,7 @@ const I18N = {
         "Начните с базового тарифа или добавьте экспертную проверку текста — структура письма остаётся одинаковой.",
       baseBadge: "Для самостоятельных пользователей",
       baseTitle: "Без проверки",
-      basePrice: "700 ₽",
+      basePrice: "700 BYE",
       basePoints: [
         "Пошаговый конструктор запроса.",
         "Черновик PDF до оплаты.",
@@ -1081,7 +1081,7 @@ const I18N = {
       baseButton: "Собрать запрос",
       expertBadge: "Рекомендуемый вариант",
       expertTitle: "С проверкой эксперта",
-      expertPrice: "2 200 ₽",
+      expertPrice: "2 200 BYE",
       expertPoints: [
         "Всё из тарифа «Без проверки».",
         "Ручная проверка юристом.",
@@ -1141,7 +1141,7 @@ const I18N = {
         emailForReply: "Email, на который вы готовы получать официальный ответ по обращению.",
         extraInfo: "Любые дополнительные сведения, которые важны для вашей ситуации (например, описание проблемы, особенности дома или договора)."
       },
-      withExpert: "Хочу проверку эксперта (+1 500 ₽)",
+      withExpert: "Хочу проверку эксперта (+1 500 BYE)",
       saveDraft: "Сохранить черновик",
       createOrder: "Создать заказ",
       hint:
@@ -1247,8 +1247,8 @@ const I18N = {
 <p>Исполнитель обязуется оказать Пользователю Услугу в соответствии с выбранным тарифом, а Пользователь обязуется оплатить Услугу в размере и порядке, предусмотренных настоящей Офертой.</p>
 
 <h2>4. Тарифы и стоимость</h2>
-<p><strong>Базовый тариф (без проверки эксперта)</strong> — 700 рублей. Включает: пошаговый конструктор запроса, черновик PDF до оплаты, готовый документ после оплаты.</p>
-<p><strong>Тариф с проверкой эксперта</strong> — 2 200 рублей. Включает всё из базового тарифа плюс ручную проверку юристом, комментарии эксперта и финальный PDF.</p>
+<p><strong>Базовый тариф (без проверки эксперта)</strong> — 700 BYE. Включает: пошаговый конструктор запроса, черновик PDF до оплаты, готовый документ после оплаты.</p>
+<p><strong>Тариф с проверкой эксперта</strong> — 2 200 BYE. Включает всё из базового тарифа плюс ручную проверку юристом, комментарии эксперта и финальный PDF.</p>
 <p>Исполнитель вправе изменять стоимость услуг. Актуальные цены указаны на сайте в момент оформления заказа.</p>
 
 <h2>5. Порядок оказания услуг</h2>
@@ -1448,13 +1448,13 @@ const I18N = {
 <p><strong>Вкладка «Цена»</strong><br />
 Здесь задаются два тарифа, которые видят пользователи на главной и в конструкторе.</p>
 
-<p><strong>Базовый тариф (₽)</strong><br />
+<p><strong>Базовый тариф (BYE)</strong><br />
 Стоимость заказа без проверки экспертом. Пользователь получает готовый документ сразу после оплаты.</p>
 
-<p><strong>Тариф с экспертом (₽)</strong><br />
+<p><strong>Тариф с экспертом (BYE)</strong><br />
 Стоимость заказа с ручной проверкой юристом. После оплаты заказ уходит в статус «В работе», админ проверяет и переводит в «Готов» или «На доработку».</p>
 
-<p>Укажите суммы в рублях (целые числа), нажмите «Сохранить цены». Изменения сразу отображаются на сайте.</p>
+<p>Укажите суммы в BYE (целые числа), нажмите «Сохранить цены». Изменения сразу отображаются на сайте.</p>
       `.trim(),
       helpAppearanceTitle: "5. Оформление сайта",
       helpAppearanceText: `
@@ -1493,8 +1493,8 @@ const I18N = {
       tabAppearance: "Оформление",
       tabTexts: "Текст",
       tabPricing: "Цена",
-      priceBaseLabel: "Базовый тариф (₽)",
-      priceExpertLabel: "Тариф с экспертом (₽)",
+      priceBaseLabel: "Базовый тариф (BYE)",
+      priceExpertLabel: "Тариф с экспертом (BYE)",
       savePrices: "Сохранить цены",
       pricesSaved: "Цены сохранены",
       pricesError: "Ошибка сохранения",
@@ -1522,8 +1522,8 @@ const I18N = {
       templateBodyEn: "Текст (EN)",
       templateCancel: "Отмена",
       templateSave: "Сохранить шаблон",
-      priceBaseLabel: "Базовый тариф (₽)",
-      priceExpertLabel: "Тариф с экспертом (₽)",
+      priceBaseLabel: "Базовый тариф (BYE)",
+      priceExpertLabel: "Тариф с экспертом (BYE)",
       savePrices: "Сохранить цены",
       pricesSaved: "Цены сохранены",
       pricesError: "Ошибка сохранения цен",
@@ -1579,9 +1579,9 @@ const I18N = {
       orderCreated: (id) =>
         `Заказ ${id} создан (демо). В реальной версии вы перешли бы на страницу оплаты.`,
       paymentBase:
-        "Оплата 700 ₽ успешно 'проведена'. Черновик PDF доступен в личном кабинете (демо).",
+        "Оплата 700 BYE успешно 'проведена'. Черновик PDF доступен в личном кабинете (демо).",
       paymentExpert:
-        "Оплата 2 200 ₽ успешно 'проведена'. Запрос отправлен эксперту на проверку (демо).",
+        "Оплата 2 200 BYE успешно 'проведена'. Запрос отправлен эксперту на проверку (демо).",
       enterEmail: "Введите email, чтобы привязать заказ (демо):",
     },
   },
@@ -1638,7 +1638,7 @@ const I18N = {
         "Start with the base plan or add expert review — the letter structure stays the same.",
       baseBadge: "For self‑service users",
       baseTitle: "Without review",
-      basePrice: "700 ₽",
+      basePrice: "700 BYE",
       basePoints: [
         "Step‑by‑step request constructor.",
         "Draft PDF before payment.",
@@ -1647,7 +1647,7 @@ const I18N = {
       baseButton: "Create request",
       expertBadge: "Recommended",
       expertTitle: "With expert review",
-      expertPrice: "2 200 ₽",
+      expertPrice: "2 200 BYE",
       expertPoints: [
         "Everything from the base plan.",
         "Manual review by a lawyer.",
@@ -1707,7 +1707,7 @@ const I18N = {
         emailForReply: "Email address where you are ready to receive the official reply.",
         extraInfo: "Any additional context that may help: description of the issue, dates, specific circumstances."
       },
-      withExpert: "I want expert review (+1 500 ₽)",
+      withExpert: "I want expert review (+1 500 BYE)",
       saveDraft: "Save draft",
       createOrder: "Create order",
       hint:
@@ -1813,8 +1813,8 @@ const I18N = {
 <p>The Provider undertakes to provide the User with the Service according to the selected plan; the User undertakes to pay for the Service in the amount and manner set forth in this Offer.</p>
 
 <h2>4. Plans and pricing</h2>
-<p><strong>Base plan (without expert review)</strong> — 700 ₽. Includes: step-by-step constructor, draft PDF before payment, final document after payment.</p>
-<p><strong>Plan with expert review</strong> — 2 200 ₽. Includes everything from the base plan plus manual review by a lawyer and final PDF.</p>
+<p><strong>Base plan (without expert review)</strong> — 700 BYE. Includes: step-by-step constructor, draft PDF before payment, final document after payment.</p>
+<p><strong>Plan with expert review</strong> — 2 200 BYE. Includes everything from the base plan plus manual review by a lawyer and final PDF.</p>
 
 <h2>5. Contact</h2>
 <p><a href="mailto:practsuveren@yandex.ru">practsuveren@yandex.ru</a>, Telegram: <a href="https://t.me/k0nstruct_bot" target="_blank" rel="noopener">@k0nstruct_bot</a>.</p>
@@ -1897,9 +1897,9 @@ const I18N = {
       orderCreated: (id) =>
         `Order ${id} created (demo). In the real version you would proceed to the payment page.`,
       paymentBase:
-        "Payment of 700 ₽ was \"processed\". The draft PDF is available in your dashboard (demo).",
+        "Payment of 700 BYE was \"processed\". The draft PDF is available in your dashboard (demo).",
       paymentExpert:
-        "Payment of 2 200 ₽ was \"processed\". The request was sent to an expert for review (demo).",
+        "Payment of 2 200 BYE was \"processed\". The request was sent to an expert for review (demo).",
       enterEmail: "Enter email to link the order (demo):",
     },
     admin: {
@@ -1970,13 +1970,13 @@ Click the cross on a pill. The variable is removed from the dictionary; in exist
 <p><strong>Pricing tab</strong><br />
 Set the two tariffs shown to users on the home page and in the constructor.</p>
 
-<p><strong>Base tariff (₽)</strong><br />
+<p><strong>Base tariff (BYE)</strong><br />
 Price without expert review. The user gets the document right after payment.</p>
 
-<p><strong>Expert tariff (₽)</strong><br />
+<p><strong>Expert tariff (BYE)</strong><br />
 Price with manual legal review. After payment the order goes to “In progress”; admin reviews and sets “Ready” or “Revision”.</p>
 
-<p>Enter amounts in rubles (whole numbers) and click “Save prices”. Changes appear on the site immediately.</p>
+<p>Enter amounts in BYE (whole numbers) and click “Save prices”. Changes appear on the site immediately.</p>
       `.trim(),
       helpAppearanceTitle: "5. Site appearance",
       helpAppearanceText: `
@@ -2015,8 +2015,8 @@ Keys <code>footer.linkCodeUrl</code>, <code>footer.linkDeclarationUrl</code>, <c
       tabAppearance: "Appearance",
       tabTexts: "Text",
       tabPricing: "Pricing",
-      priceBaseLabel: "Base tariff (₽)",
-      priceExpertLabel: "Expert tariff (₽)",
+      priceBaseLabel: "Base tariff (BYE)",
+      priceExpertLabel: "Expert tariff (BYE)",
       savePrices: "Save prices",
       pricesSaved: "Prices saved",
       pricesError: "Error saving",
@@ -2044,8 +2044,8 @@ Keys <code>footer.linkCodeUrl</code>, <code>footer.linkDeclarationUrl</code>, <c
       templateBodyEn: "Body (EN)",
       templateCancel: "Cancel",
       templateSave: "Save template",
-      priceBaseLabel: "Base tariff (₽)",
-      priceExpertLabel: "Expert tariff (₽)",
+      priceBaseLabel: "Base tariff (BYE)",
+      priceExpertLabel: "Expert tariff (BYE)",
       savePrices: "Save prices",
       pricesSaved: "Prices saved",
       pricesError: "Error saving prices",
@@ -2904,7 +2904,7 @@ function openTopupModal() {
     <div class="modal-content" style="max-width:420px;">
       <h3 class="modal-title">${isRu ? 'Пополнить баланс BYE' : 'Top up BYE balance'}</h3>
       <p class="small muted-text" style="margin-bottom:12px">
-        ${isRu ? 'Выберите фиксированную сумму или введите свою. 1 BYE = 1 ₽.' : 'Choose a fixed amount or enter your own. 1 BYE = 1 RUB.'}
+        ${isRu ? 'Выберите фиксированную сумму или введите свою. 1 BYE = 1 единица баланса.' : 'Choose a fixed amount or enter your own. 1 BYE = 1 balance unit.'}
       </p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
         <button type="button" class="secondary-btn" data-topup-preset="${base}">${base.toLocaleString(isRu ? 'ru-RU' : 'en-US')} BYE</button>
@@ -3081,7 +3081,7 @@ function renderHome() {
               ${tService.baseBadge}
             </div>
             <h3 class="price-title">${tService.baseTitle}</h3>
-            <div class="price-main">${(state.pricing?.base_price_rub || 700).toLocaleString('ru-RU')} ₽</div>
+            <div class="price-main">${(state.pricing?.base_price_rub || 700).toLocaleString('ru-RU')} BYE</div>
             <ul class="price-list small">
               ${tService.basePoints
                 .map((p) => `<li>${p}</li>`)
@@ -3098,7 +3098,7 @@ function renderHome() {
               ${tService.expertBadge}
             </div>
             <h3 class="price-title">${tService.expertTitle}</h3>
-            <div class="price-main">${(state.pricing?.expert_price_rub || 2200).toLocaleString('ru-RU')} ₽</div>
+            <div class="price-main">${(state.pricing?.expert_price_rub || 2200).toLocaleString('ru-RU')} BYE</div>
             <ul class="price-list small">
               ${tService.expertPoints
                 .map((p) => `<li>${p}</li>`)
