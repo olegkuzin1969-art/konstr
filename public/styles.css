@@ -1010,7 +1010,10 @@ html {
     'KONSTR DEMO    KONSTR DEMO    KONSTR DEMO\A\A'
     'KONSTR DEMO    KONSTR DEMO    KONSTR DEMO';
   position: absolute;
-  inset: 0;
+  top: -200%;
+  bottom: -200%;
+  left: -20%;
+  right: -20%;
   padding: 16px;
   white-space: pre;
   text-align: center;
