@@ -2494,31 +2494,20 @@ function getLetterPreview() {
 function getWatermarkedPreview() {
   const base = getLetterPreview();
   if (!base) return '';
-  const markerRu = '※ DEMO KONSTR ※';
-  const markerEn = '※ DEMO KONSTR ※';
-  const isRu = state.lang === 'ru';
-  const marker = isRu ? markerRu : markerEn;
   const zw = '\u200B'; // zero‑width space
 
-  const paragraphs = base.split(/\n{2,}/);
-  const processed = paragraphs.map((p, idx) => {
-    let text = p;
-    // В каждую строку вставляем невидимые символы между словами
-    text = text.split('\n').map((line) => {
+  // Добавляем невидимые символы между словами, чтобы ухудшить качество копипасты,
+  // но не меняем видимый текст и структуру письма.
+  return base
+    .split('\n')
+    .map((line) => {
       const parts = line.split(' ');
       if (parts.length <= 3) return line;
       return parts
         .map((word, i) => (i > 0 && i < parts.length - 1 ? zw + word : word))
         .join(' ');
-    }).join('\n');
-    // В каждый второй абзац добавляем маленький маркер в конец
-    if (idx % 2 === 1) {
-      text += `\n\n${marker}`;
-    }
-    return text;
-  });
-
-  return processed.join('\n\n\n').trim();
+    })
+    .join('\n');
 }
 
 function escapeHtml(s) {
