@@ -86,6 +86,17 @@ module.exports = async function handler(req, res) {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     if (req.method === 'GET') {
+      if (resource === 'me') {
+        const { data: userRow, error: userErr } = await supabase
+          .from('users')
+          .select('id, telegram_id, first_name, last_name, username, balance, created_at')
+          .eq('id', userId)
+          .single();
+        if (userErr) return res.status(500).json({ error: userErr.message });
+        if (!userRow) return res.status(404).json({ error: 'Пользователь не найден' });
+        return res.status(200).json({ user: userRow });
+      }
+
       if (resource === 'balance_ops') {
         const { data, error } = await supabase
           .from('balance_operations')

@@ -510,13 +510,10 @@ async function initAuth() {
   checkSavedAuth();
   if (state.user) {
     try {
-      const ops = await fetchBalanceOperations();
-      if (Array.isArray(ops)) {
-        const balance = ops.reduce((sum, op) => sum + (Number(op.amount_bye || 0)), 0);
-        if (state.user) {
-          state.user = { ...state.user, balance };
-          localStorage.setItem('user', JSON.stringify(state.user));
-        }
+      const fresh = await fetchCurrentUserProfile();
+      if (fresh && typeof fresh.balance === 'number') {
+        state.user = { ...state.user, ...fresh };
+        localStorage.setItem('user', JSON.stringify(state.user));
       }
     } catch {}
     updateProfileUI();
@@ -870,6 +867,11 @@ async function fetchAdminUserOperations(userId) {
 async function changeAdminUserBalance(userId, deltaBye, description) {
   const data = await adminOrdersApi('POST', { resource: 'user_balance', user_id: userId, delta_bye: deltaBye, description });
   return data;
+}
+
+async function fetchCurrentUserProfile() {
+  const data = await ordersApi('GET', { resource: 'me' });
+  return data.user || null;
 }
 
 async function checkAdminStatus() {
