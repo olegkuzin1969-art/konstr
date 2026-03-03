@@ -2846,7 +2846,7 @@ function openTopupModal() {
       emailInput?.focus();
       return;
     }
-    const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       alert(isRu ? 'Укажите корректный email (например example@mail.ru).' : 'Enter a valid email (e.g. example@mail.com).');
       emailInput?.focus();
