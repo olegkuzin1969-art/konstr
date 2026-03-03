@@ -2641,11 +2641,11 @@ async function applyPaymentReturn() {
   }
   const isRu = state.lang === 'ru';
   const successMsg = isRu
-    ? 'Оплата прошла. Средства зачислены на ваш баланс BYE.'
-    : 'Payment successful. Funds have been credited to your BYE balance.';
+    ? 'Оплата прошла. Средства зачислены на ваш баланс BYE. Присоединяйтесь к нашему сообществу в Telegram: https://t.me/SDTSamara'
+    : 'Payment successful. Funds have been credited to your BYE balance. Join our Telegram community: https://t.me/SDTSamara';
   const errorMsg = isRu
-    ? 'Ошибка оплаты. Средства не были зачислены на баланс.'
-    : 'Payment failed. No funds were credited to the balance.';
+    ? 'Ошибка оплаты. Средства не были зачислены на баланс. Присоединяйтесь к нашему сообществу в Telegram: https://t.me/SDTSamara'
+    : 'Payment failed. No funds were credited to the balance. Join our Telegram community: https://t.me/SDTSamara';
   window.history.replaceState(null, '', window.location.pathname + '#balance');
   window.location.hash = '#balance';
   let msg = errorMsg;
