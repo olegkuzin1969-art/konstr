@@ -992,6 +992,8 @@ html {
   box-shadow: inset 0 0 0 1px #e5e7eb;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .preview-letter h3 {

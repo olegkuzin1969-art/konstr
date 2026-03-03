@@ -2206,7 +2206,7 @@ async function saveDraft() {
 
 function showPaymentModal() {
   const t = I18N[state.lang].constructor;
-  const letter = getLetterPreview();
+  const letter = getWatermarkedPreview();
   const overlay = document.createElement('div');
   overlay.id = 'payment-modal-overlay';
   overlay.className = 'payment-modal-overlay';
@@ -2286,7 +2286,7 @@ function showPaymentModal() {
 
 function showBalancePaymentModal(orderData) {
   const t = I18N[state.lang].constructor;
-  const letter = getLetterPreview();
+  const letter = getWatermarkedPreview();
   const overlay = document.createElement('div');
   overlay.id = 'balance-payment-modal-overlay';
   overlay.className = 'payment-modal-overlay';
@@ -2488,6 +2488,37 @@ function getLetterPreviewFromData(f) {
 
 function getLetterPreview() {
   return getLetterPreviewFromData(state.constructorForm);
+}
+
+// Добавляем лёгкий водяной знак только для предпросмотра на сайте
+function getWatermarkedPreview() {
+  const base = getLetterPreview();
+  if (!base) return '';
+  const markerRu = '※ DEMO KONSTR ※';
+  const markerEn = '※ DEMO KONSTR ※';
+  const isRu = state.lang === 'ru';
+  const marker = isRu ? markerRu : markerEn;
+  const zw = '\u200B'; // zero‑width space
+
+  const paragraphs = base.split(/\n{2,}/);
+  const processed = paragraphs.map((p, idx) => {
+    let text = p;
+    // В каждую строку вставляем невидимые символы между словами
+    text = text.split('\n').map((line) => {
+      const parts = line.split(' ');
+      if (parts.length <= 3) return line;
+      return parts
+        .map((word, i) => (i > 0 && i < parts.length - 1 ? zw + word : word))
+        .join(' ');
+    }).join('\n');
+    // В каждый второй абзац добавляем маленький маркер в конец
+    if (idx % 2 === 1) {
+      text += `\n\n${marker}`;
+    }
+    return text;
+  });
+
+  return processed.join('\n\n\n').trim();
 }
 
 function escapeHtml(s) {
@@ -2815,7 +2846,7 @@ function render() {
 function refreshLetterPreview() {
   const pre = document.getElementById("letter-preview");
   if (!pre) return;
-  pre.textContent = getLetterPreview();
+  pre.textContent = getWatermarkedPreview();
 }
 
 function applyLanguageToShell() {
