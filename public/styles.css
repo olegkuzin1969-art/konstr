@@ -395,18 +395,19 @@ html {
   box-shadow: inset 2px 2px 4px rgba(163, 177, 198, 0.4);
 }
 
-/* Админка: вкладки в одну строку (5 вкладок) */
+/* Админка: вкладки (6 вкладок, адаптивная сетка) */
 #admin .profile-tabs-split {
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .profile-tabs-split .profile-tab-btn {
-  padding: 12px 16px;
+  padding: 10px 12px;
   border-radius: 10px;
   border: none;
   background: transparent;
   color: var(--text-muted);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -588,6 +589,89 @@ html {
 }
 
 .back-link:hover { opacity: 0.8; }
+
+/* ====== MOBILE ADAPTATION ====== */
+
+@media (max-width: 768px) {
+  /* Blog: hero card and add button */
+  .blog-page-wrap {
+    padding: 72px 0 16px;
+  }
+
+  .blog-hero-card-with-add {
+    padding: 24px 16px 20px;
+    text-align: left;
+  }
+
+  .blog-add-btn {
+    top: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .page-title {
+    font-size: 22px;
+  }
+
+  .neo-card.blog-post-card {
+    padding: 16px;
+  }
+
+  .neo-card.blog-post-card > div:first-child {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .neo-card.blog-post-card .secondary-btn,
+  .neo-card.blog-post-card .primary-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .blog-comment-header {
+    flex-direction: column;
+  }
+
+  .blog-comment-header > div:last-child {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  /* Admin: tabs become 2 columns on small screens */
+  #admin .profile-tabs-split {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Admin header and actions stack */
+  #admin .section-shell > div:first-child {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .admin-order-card {
+    padding: 12px 10px;
+  }
+
+  .admin-order-card .admin-revision-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-order-card .admin-revision-row .secondary-btn {
+    width: 100%;
+  }
+
+  /* Admin texts table: horizontal scroll on mobile */
+  .table-wrapper {
+    overflow-x: auto;
+  }
+
+  .table {
+    min-width: 640px;
+  }
+}
 
 .page-grid {
   display: grid;
