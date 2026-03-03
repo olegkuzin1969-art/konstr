@@ -2480,18 +2480,12 @@ function getLetterPreviewFromData(f) {
   const title = fillPlaceholders(titleRaw, vars);
   const header = (headerRaw && headerRaw.trim()) ? fillPlaceholders(headerRaw.trim(), vars) : '';
   const body = fillPlaceholders(bodyRaw, vars);
-  let parts;
 
-  // Для шаблона "Требование по 402‑ФЗ к банку" в черновике показываем только реквизиты и заголовок,
-  // без длинного правового обоснования (полный текст остаётся в PDF и финальном документе).
-  if (tpl && typeof tpl.name === 'string' && tpl.name.includes('402') && tpl.name.toLowerCase().includes('банку')) {
-    parts = [];
-    if (header) parts.push(header);
-    if (title) parts.push(title);
-  } else {
-    parts = [title, body];
-    if (header) parts.unshift(header);
-  }
+  // В черновике (предпросмотр на сайте) показываем только шапку и заголовок,
+  // чтобы основной юридический текст был доступен только в оплаченной версии (PDF / финальный документ).
+  const parts = [];
+  if (header) parts.push(header);
+  if (title) parts.push(title);
 
   return parts.join('\n\n\n').trim();
 }
