@@ -1,6 +1,8 @@
 const { Resend } = require('resend');
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const RESEND_FROM =
+  process.env.RESEND_FROM || 'Конструкт <onboarding@resend.dev>';
 const CONTACT_EMAIL = 'practsuveren@yandex.ru';
 
 module.exports = async function handler(req, res) {
@@ -26,7 +28,7 @@ module.exports = async function handler(req, res) {
     const resend = new Resend(RESEND_API_KEY);
 
     const { data, error } = await resend.emails.send({
-      from: 'Конструкт <onboarding@resend.dev>',
+      from: RESEND_FROM,
       to: [CONTACT_EMAIL],
       replyTo: email || undefined,
       subject: `Обратная связь: ${(name || '').slice(0, 50)}`,
