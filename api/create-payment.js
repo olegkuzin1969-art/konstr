@@ -119,8 +119,14 @@ module.exports = async function handler(req, res) {
         if (pricingRow) {
           const base = Number(pricingRow.base_price_rub);
           const expert = Number(pricingRow.expert_price_rub);
-          if (Number.isFinite(base) && base > 0 && Number.isInteger(base) &&
-              Number.isFinite(expert) && expert > 0 && Number.isInteger(expert)) {
+          if (
+            Number.isFinite(base) &&
+            base > 0 &&
+            Number.isInteger(base) &&
+            Number.isFinite(expert) &&
+            expert > 0 &&
+            Number.isInteger(expert)
+          ) {
             amountRub = withExpert ? expert : base;
           }
         }
@@ -131,11 +137,31 @@ module.exports = async function handler(req, res) {
 
     const amountKop = amountRub * 100;
     const valueStr = amountRub.toFixed(2);
+
+    const customerEmail = body.receiptEmail && String(body.receiptEmail).trim();
+    if (!customerEmail) {
+      return res.status(400).json({
+        error: 'Укажите email для чека в модальном окне перед оплатой.',
+      });
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customerEmail)) {
+      return res.status(400).json({
+        error:
+          'Укажите корректный email для чека (например example@mail.ru).',
+      });
+    }
+
+    const orderDataForIntent =
+      orderData && typeof orderData === 'object'
+        ? { ...orderData, withExpert, receiptEmail: customerEmail }
+        : null;
+
     const { data: intent, error: insertError } = await supabase
       .from('payment_intents')
       .insert({
         user_id: userId,
-        order_data: orderData ? { ...orderData, withExpert } : null,
+        order_data: orderDataForIntent,
         with_expert: withExpert,
         amount_kop: amountKop,
         status: 'pending',
@@ -143,20 +169,16 @@ module.exports = async function handler(req, res) {
       })
       .select('id')
       .single();
-    if (insertError || !intent) return res.status(500).json({ error: insertError?.message || 'Ошибка создания намерения' });
+    if (insertError || !intent)
+      return res
+        .status(500)
+        .json({ error: insertError?.message || 'Ошибка создания намерения' });
 
     const returnUrl = `${BASE_URL}/?payment=success`;
     const idempotenceKey = crypto.randomUUID();
-    const auth = Buffer.from(`${YOOKASSA_SHOP_ID}:${YOOKASSA_SECRET_KEY}`).toString('base64');
-
-    const customerEmail = body.receiptEmail && String(body.receiptEmail).trim();
-    if (!customerEmail) {
-      return res.status(400).json({ error: 'Укажите email для чека в модальном окне перед оплатой.' });
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(customerEmail)) {
-      return res.status(400).json({ error: 'Укажите корректный email для чека (например example@mail.ru).' });
-    }
+    const auth = Buffer.from(
+      `${YOOKASSA_SHOP_ID}:${YOOKASSA_SECRET_KEY}`
+    ).toString('base64');
 
     const receipt = {
       customer: { email: customerEmail },

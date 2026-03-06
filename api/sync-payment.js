@@ -1,5 +1,10 @@
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
+const {
+  prepareOrderDocument,
+  buildOrderPdfBuffer,
+  sendOrderEmail,
+} = require('../lib/orderEmail');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -84,7 +89,9 @@ module.exports = async function handler(req, res) {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data: intents } = await supabase
       .from('payment_intents')
-      .select('id, user_id, order_data, with_expert, yookassa_payment_id, status, amount_kop, purpose')
+      .select(
+        'id, user_id, order_data, with_expert, yookassa_payment_id, status, amount_kop, purpose'
+      )
       .eq('user_id', userId)
       .eq('status', 'pending')
       .not('yookassa_payment_id', 'is', null)
@@ -113,7 +120,7 @@ module.exports = async function handler(req, res) {
         .eq('status', 'pending')
         .select('id');
       if (lockErr || !lockedRows || lockedRows.length === 0) continue;
-      
+
       if (intent.purpose === 'balance') {
         const amountBye = Math.round((intent.amount_kop || 0) / 100);
         let next = null;
@@ -139,7 +146,10 @@ module.exports = async function handler(req, res) {
                 user_id: intent.user_id,
                 amount_bye: amountBye,
                 type: 'topup_yookassa',
-                meta: { payment_intent_id: intent.id, payment_id: payment.id || null },
+                meta: {
+                  payment_intent_id: intent.id,
+                  payment_id: payment.id || null,
+                },
               });
             }
           }
@@ -155,9 +165,62 @@ module.exports = async function handler(req, res) {
         });
         if (orderError) {
           console.error('sync-payment order insert:', orderError);
-          await supabase.from('payment_intents').update({ status: 'pending' }).eq('id', intent.id);
+          await supabase
+            .from('payment_intents')
+            .update({ status: 'pending' })
+            .eq('id', intent.id);
           continue;
         }
+
+        const orderData = intent.order_data || {};
+        const receiptEmail =
+          (orderData.receiptEmail &&
+            String(orderData.receiptEmail).trim()) ||
+          '';
+        if (receiptEmail) {
+          try {
+            const lang =
+              orderData.lang === 'en' || orderData.lang === 'ru'
+                ? orderData.lang
+                : 'ru';
+            const amountBye = Math.round((intent.amount_kop || 0) / 100);
+
+            const { headerText, titleText, bodyText, templateName } =
+              await prepareOrderDocument({
+                supabase,
+                orderData,
+                lang,
+              });
+            const pdfBuffer = await buildOrderPdfBuffer({
+              headerText,
+              titleText,
+              bodyText,
+              lang,
+            });
+
+            const name =
+              (orderData.ukName || 'Zapros')
+                .toString()
+                .replace(/[^\p{L}\p{N}]+/gu, '_')
+                .slice(0, 30) || 'Zapros';
+            const filename = `Zapros_Konstructor_${name}_${new Date()
+              .toISOString()
+              .slice(0, 10)}.pdf`;
+
+            await sendOrderEmail({
+              to: receiptEmail,
+              lang,
+              templateName,
+              withExpert: !!intent.with_expert,
+              amountBye,
+              pdfBuffer,
+              filename,
+            });
+          } catch (e) {
+            console.error('sync-payment order email error:', e);
+          }
+        }
+
         return res.status(200).json({ synced: true });
       }
     }

@@ -1,5 +1,10 @@
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
+const {
+  prepareOrderDocument,
+  buildOrderPdfBuffer,
+  sendOrderEmail,
+} = require('../lib/orderEmail');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -117,9 +122,13 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      if (resource !== 'orders') return res.status(400).json({ error: 'Unsupported resource' });
+      if (resource !== 'orders')
+        return res.status(400).json({ error: 'Unsupported resource' });
       const { data: orderData } = body;
-      if (!orderData || typeof orderData !== 'object') return res.status(400).json({ error: 'Некорректные данные заказа' });
+      if (!orderData || typeof orderData !== 'object')
+        return res
+          .status(400)
+          .json({ error: 'Некорректные данные заказа' });
       const withExpert = !!orderData.withExpert;
 
       let amountRub = withExpert ? 2200 : 700;
@@ -132,8 +141,14 @@ module.exports = async function handler(req, res) {
         if (pricingRow) {
           const base = Number(pricingRow.base_price_rub);
           const expert = Number(pricingRow.expert_price_rub);
-          if (Number.isFinite(base) && base > 0 && Number.isInteger(base) &&
-              Number.isFinite(expert) && expert > 0 && Number.isInteger(expert)) {
+          if (
+            Number.isFinite(base) &&
+            base > 0 &&
+            Number.isInteger(base) &&
+            Number.isFinite(expert) &&
+            expert > 0 &&
+            Number.isInteger(expert)
+          ) {
             amountRub = withExpert ? expert : base;
           }
         }
@@ -149,7 +164,9 @@ module.exports = async function handler(req, res) {
       if (userErr) return res.status(500).json({ error: userErr.message });
       const currentBalance = Number(userRow?.balance || 0);
       if (currentBalance < amountRub) {
-        return res.status(400).json({ error: 'Недостаточно средств на балансе' });
+        return res
+          .status(400)
+          .json({ error: 'Недостаточно средств на балансе' });
       }
 
       const nextBalance = currentBalance - amountRub;
@@ -160,8 +177,17 @@ module.exports = async function handler(req, res) {
       if (balErr) return res.status(500).json({ error: balErr.message });
 
       const approved = withExpert ? null : true;
-      const row = { user_id: userId, data: orderData, approved, revision_comment: '' };
-      const { data: inserted, error } = await supabase.from('orders').insert(row).select().single();
+      const row = {
+        user_id: userId,
+        data: orderData,
+        approved,
+        revision_comment: '',
+      };
+      const { data: inserted, error } = await supabase
+        .from('orders')
+        .insert(row)
+        .select()
+        .single();
       if (error) return res.status(500).json({ error: error.message });
 
       await supabase.from('balance_operations').insert({
@@ -170,6 +196,51 @@ module.exports = async function handler(req, res) {
         type: 'order_payment',
         meta: { order_id: inserted.id || null, with_expert: withExpert },
       });
+
+      const receiptEmail =
+        (orderData.receiptEmail && String(orderData.receiptEmail).trim()) ||
+        '';
+      if (receiptEmail) {
+        try {
+          const lang =
+            orderData.lang === 'en' || orderData.lang === 'ru'
+              ? orderData.lang
+              : 'ru';
+          const { headerText, titleText, bodyText, templateName } =
+            await prepareOrderDocument({
+              supabase,
+              orderData,
+              lang,
+            });
+          const pdfBuffer = await buildOrderPdfBuffer({
+            headerText,
+            titleText,
+            bodyText,
+            lang,
+          });
+
+          const name =
+            (orderData.ukName || 'Zapros')
+              .toString()
+              .replace(/[^\p{L}\p{N}]+/gu, '_')
+              .slice(0, 30) || 'Zapros';
+          const filename = `Zapros_Konstructor_${name}_${new Date()
+            .toISOString()
+            .slice(0, 10)}.pdf`;
+
+          await sendOrderEmail({
+            to: receiptEmail,
+            lang,
+            templateName,
+            withExpert,
+            amountBye: amountRub,
+            pdfBuffer,
+            filename,
+          });
+        } catch (e) {
+          console.error('order email send error:', e);
+        }
+      }
 
       return res.status(200).json({ order: inserted, balance: nextBalance });
     }
