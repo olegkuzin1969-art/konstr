@@ -471,6 +471,39 @@ module.exports = async function handler(req, res) {
       return res.status(405).end();
     }
 
+    // ===== Order data edit (админ может править данные заказа и статус) =====
+    if (resource === 'order_data') {
+      if (req.method === 'PUT') {
+        const id = body.id;
+        const data = body.data;
+        const approved = body.approved;
+        const revision_comment = body.revision_comment;
+        if (!id) return res.status(400).json({ error: 'id обязателен' });
+        if (!data || typeof data !== 'object') return res.status(400).json({ error: 'data должен быть объектом' });
+
+        const update = { data, updated_at: new Date().toISOString() };
+        if (approved !== undefined) update.approved = approved;
+        if (revision_comment !== undefined) {
+          const commentVal = String(revision_comment || '').trim();
+          update.revision_comment = commentVal;
+          if (approved === false && !commentVal) {
+            return res.status(400).json({ error: 'При статусе "на доработку" обязателен комментарий' });
+          }
+        }
+
+        const { data: updated, error } = await supabase
+          .from('orders')
+          .update(update)
+          .eq('id', id)
+          .select('id, data, approved, revision_comment, created_at, user_id')
+          .single();
+        if (error) return res.status(500).json({ error: error.message });
+        if (!updated) return res.status(404).json({ error: 'Заказ не найден' });
+        return res.status(200).json({ order: updated });
+      }
+      return res.status(405).end();
+    }
+
     if (req.method === 'GET') {
       const { data: orders, error } = await supabase
         .from('orders')

@@ -869,6 +869,13 @@ async function changeAdminUserBalance(userId, deltaBye, description) {
   return data;
 }
 
+async function adminUpdateOrderData(id, orderData, approved, revisionComment) {
+  const payload = { resource: 'order_data', id, data: orderData };
+  if (approved !== undefined) payload.approved = approved;
+  if (revisionComment !== undefined) payload.revision_comment = revisionComment;
+  const data = await adminOrdersApi('PUT', payload);
+  return data.order;
+}
 async function fetchCurrentUserProfile() {
   const data = await ordersApi('GET', { resource: 'me' });
   return data.user || null;
@@ -2733,26 +2740,105 @@ function openOrderModal(order) {
 }
 
 function openAdminOrderModal(order) {
-  const t = I18N[state.lang].profile;
-  const preview = getLetterPreviewFromData(order?.data);
+  const tProfile = I18N[state.lang].profile;
+  const tAdmin = I18N[state.lang].admin;
+  const isRu = state.lang === 'ru';
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px';
+
+  const data = order.data || {};
+  const templates = Array.isArray(state.templates) && state.templates.length ? state.templates : getBuiltInTemplates();
+  const tpl = templates.find((t) => String(t.id) === String(data.templateId)) || templates[0];
+  const variables = getTemplateVariables(tpl);
+  const fields = data.fields && typeof data.fields === 'object' ? { ...data.fields } : { ...data };
+
+  const preview = getLetterPreviewFromData(order?.data);
+
+  const formRows = variables.map((v) => {
+    const val = fields[v.key] != null ? String(fields[v.key]) : '';
+    const esc = (s) => (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return `
+      <div class="field">
+        <div class="stacked-label">${esc(v.label)}</div>
+        <input class="input admin-order-field" data-key="${esc(v.key)}" value="${esc(val)}" />
+      </div>
+    `;
+  }).join('');
+
   overlay.innerHTML = `
-    <div class="modal-content">
-      <h3 class="modal-title">${t.orderPreview}</h3>
-      <div class="modal-preview" style="max-height:70vh;overflow:auto"><pre style="white-space:pre-wrap;font-size:13px">${(preview || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre></div>
-      <div class="modal-actions">
-        <button class="secondary-btn" id="admin-modal-close">${t.close || 'Закрыть'}</button>
+    <div class="modal-content" style="max-width:800px;width:100%;max-height:90vh;overflow:auto">
+      <h3 class="modal-title">${tProfile.orderPreview}</h3>
+      <div class="modal-preview preview-letter" style="max-height:260px;overflow:auto;margin-bottom:16px;">
+        <pre style="white-space:pre-wrap;font-size:13px;margin:0">${(preview || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+      </div>
+      <div class="field" style="margin-bottom:16px">
+        <div class="stacked-label">${isRu ? 'Данные документа (для правки экспертом)' : 'Document data (expert edits)'}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+          ${formRows || `<p class="small muted-text">${isRu ? 'Для этого шаблона нет переменных.' : 'No variables for this template.'}</p>`}
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:12px">
+        <div class="stacked-label">${tAdmin.commentPlaceholder}</div>
+        <textarea class="textarea input" id="admin-order-comment" rows="3" placeholder="${tAdmin.commentPlaceholder}">${order.revision_comment ? (order.revision_comment) : ''}</textarea>
+      </div>
+      <div class="modal-actions" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end">
+        <button class="secondary-btn" id="admin-modal-close">${tProfile.close || 'Закрыть'}</button>
+        <button class="secondary-btn" id="admin-modal-revision">${tAdmin.setRevision}</button>
+        <button class="primary-btn" id="admin-modal-ready">${tAdmin.setReady}</button>
       </div>
     </div>
   `;
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px';
+
   document.body.appendChild(overlay);
 
   const close = () => overlay.remove();
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   overlay.querySelector('#admin-modal-close').addEventListener('click', close);
+
+  function collectUpdatedData() {
+    const nextFields = { ...fields };
+    overlay.querySelectorAll('.admin-order-field').forEach((input) => {
+      const key = input.getAttribute('data-key');
+      if (!key) return;
+      nextFields[key] = input.value;
+    });
+    const nextData = { ...data, fields: nextFields };
+    return nextData;
+  }
+
+  overlay.querySelector('#admin-modal-ready')?.addEventListener('click', async () => {
+    const nextData = collectUpdatedData();
+    const comment = '';
+    try {
+      const updated = await adminUpdateOrderData(order.id, nextData, true, comment);
+      const idx = state.adminOrders.findIndex((o) => o.id === order.id);
+      if (idx >= 0) state.adminOrders[idx] = { ...state.adminOrders[idx], ...updated };
+      close();
+      renderAdmin();
+    } catch (e) {
+      alert((isRu ? 'Ошибка: ' : 'Error: ') + (e?.message || ''));
+    }
+  });
+
+  overlay.querySelector('#admin-modal-revision')?.addEventListener('click', async () => {
+    const nextData = collectUpdatedData();
+    const comment = overlay.querySelector('#admin-order-comment')?.value?.trim() || '';
+    if (!comment) {
+      alert(isRu ? 'Введите комментарий для доработки.' : 'Enter revision comment.');
+      return;
+    }
+    try {
+      const updated = await adminUpdateOrderData(order.id, nextData, false, comment);
+      const idx = state.adminOrders.findIndex((o) => o.id === order.id);
+      if (idx >= 0) state.adminOrders[idx] = { ...state.adminOrders[idx], ...updated };
+      close();
+      renderAdmin();
+    } catch (e) {
+      alert((isRu ? 'Ошибка: ' : 'Error: ') + (e?.message || ''));
+    }
+  });
 }
 
 function formatOrderPreview(order) {
