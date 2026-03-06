@@ -481,7 +481,7 @@ module.exports = async function handler(req, res) {
         if (!id) return res.status(400).json({ error: 'id обязателен' });
         if (!data || typeof data !== 'object') return res.status(400).json({ error: 'data должен быть объектом' });
 
-        const update = { data, updated_at: new Date().toISOString() };
+        const update = { data };
         if (approved !== undefined) update.approved = approved;
         if (revision_comment !== undefined) {
           const commentVal = String(revision_comment || '').trim();
