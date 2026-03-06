@@ -1538,13 +1538,13 @@ const I18N = {
       statusInWork: "В работе",
       statusReady: "Готов",
       statusRevision: "На доработку",
-      setReady: "Завершить (можно скачать)",
-      setRevision: "На доработку",
+      setReady: "Отправить как готовый",
+      setRevision: "Отправить на доработку",
       commentPlaceholder: "Комментарий эксперта...",
       save: "Сохранить",
       user: "Пользователь",
       date: "Дата",
-      view: "Просмотр",
+      view: "Редактировать",
       templatesEmpty: "Нет шаблонов.",
       createTemplate: "Создать шаблон",
       editTemplate: "Редактировать",
@@ -2061,13 +2061,13 @@ Keys <code>footer.linkCodeUrl</code>, <code>footer.linkDeclarationUrl</code>, <c
       statusInWork: "In progress",
       statusReady: "Ready",
       statusRevision: "Revision",
-      setReady: "Complete (can download)",
-      setRevision: "Send for revision",
+      setReady: "Mark as ready",
+      setRevision: "Send back for revision",
       commentPlaceholder: "Expert comment...",
       save: "Save",
       user: "User",
       date: "Date",
-      view: "View",
+      view: "Edit",
       templatesEmpty: "No templates.",
       createTemplate: "Create template",
       editTemplate: "Edit",
@@ -2810,7 +2810,11 @@ function openAdminOrderModal(order) {
 
   overlay.querySelector('#admin-modal-ready')?.addEventListener('click', async () => {
     const nextData = collectUpdatedData();
-    const comment = '';
+    const comment = overlay.querySelector('#admin-order-comment')?.value?.trim() || '';
+    if (!comment) {
+      alert(isRu ? 'Введите комментарий эксперта.' : 'Enter expert comment.');
+      return;
+    }
     try {
       const updated = await adminUpdateOrderData(order.id, nextData, true, comment);
       const idx = state.adminOrders.findIndex((o) => o.id === order.id);
@@ -4864,17 +4868,10 @@ async function renderAdmin() {
               <div style="font-weight:600;margin-bottom:4px">${escapeHtml(preview)}</div>
               <div class="small muted-text">${t.user}: ${escapeHtml(formatUser(o.user))} · ${t.date}: ${new Date(o.created_at).toLocaleDateString()}</div>
               <div style="margin-top:8px"><span class="tag" style="background:var(--bg-soft);padding:4px 8px;border-radius:6px">${statusLabel(approved)}</span></div>
-              ${approved === false && o.revision_comment ? `<div class="small muted-text" style="margin-top:8px">${state.lang === 'ru' ? 'Комментарий:' : 'Comment:'} ${escapeHtml(o.revision_comment)}</div>` : ''}
-              <div style="margin-top:8px"><button class="secondary-btn admin-view-order" data-order-index="${i}">${t.view}</button></div>
+              ${o.revision_comment ? `<div class="small muted-text" style="margin-top:8px">${state.lang === 'ru' ? 'Комментарий эксперта:' : 'Expert comment:'} ${escapeHtml(o.revision_comment)}</div>` : ''}
             </div>
-            <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0">
-              ${canSetReady ? `<button class="secondary-btn admin-set-ready" data-order-id="${id}">${t.setReady}</button>` : ''}
-              ${canSetRevision ? `
-                <div class="admin-revision-row" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-                  <input type="text" class="input admin-comment-input" data-order-id="${id}" placeholder="${t.commentPlaceholder}" value="${escapeHtml(o.revision_comment || '')}" />
-                  <button class="secondary-btn admin-set-revision" data-order-id="${id}" data-comment-input="admin-comment-${i}">${t.setRevision}</button>
-                </div>
-              ` : ''}
+            <div style="flex-shrink:0;display:flex;align-items:flex-start;gap:8px">
+              <button class="secondary-btn admin-view-order" data-order-index="${i}">${t.view}</button>
             </div>
           </div>
         </div>
@@ -4891,40 +4888,6 @@ async function renderAdmin() {
       });
     });
 
-    listEl.querySelectorAll('.admin-set-ready').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-order-id');
-        try {
-          await patchAdminOrderStatus(id, true, '');
-          const idx = state.adminOrders.findIndex((o) => o.id === id);
-          if (idx >= 0) state.adminOrders[idx] = { ...state.adminOrders[idx], approved: true, revision_comment: '' };
-          renderAdmin();
-        } catch (e) {
-          alert(state.lang === 'ru' ? 'Ошибка: ' + e.message : 'Error: ' + e.message);
-        }
-      });
-    });
-
-    listEl.querySelectorAll('.admin-set-revision').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-order-id');
-        const card = listEl.querySelector(`[data-order-id="${id}"]`);
-        const input = card?.querySelector('.admin-comment-input');
-        const comment = (input?.value || '').trim();
-        if (!comment) {
-          alert(state.lang === 'ru' ? 'Введите комментарий для доработки.' : 'Enter revision comment.');
-          return;
-        }
-        try {
-          await patchAdminOrderStatus(id, false, comment);
-          const idx = state.adminOrders.findIndex((o) => o.id === id);
-          if (idx >= 0) state.adminOrders[idx] = { ...state.adminOrders[idx], approved: false, revision_comment: comment };
-          renderAdmin();
-        } catch (e) {
-          alert(state.lang === 'ru' ? 'Ошибка: ' + e.message : 'Error: ' + e.message);
-        }
-      });
-    });
   }
 }
 
