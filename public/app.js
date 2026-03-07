@@ -2504,6 +2504,47 @@ function getLetterPreviewFromData(f) {
   return parts.join('\n\n\n').trim();
 }
 
+/** Полный текст документа (шапка + заголовок + тело) для админки и при наличии fullTextOverride. */
+function getFullDocumentTextFromData(f) {
+  if (!f) f = state.constructorForm;
+  if (f.fullTextOverride && String(f.fullTextOverride).trim()) return String(f.fullTextOverride).trim();
+  const lang = state.lang;
+  const ru = state.lang === 'ru';
+
+  function pickTemplate(templateId) {
+    const list = Array.isArray(state.templates) && state.templates.length ? state.templates : getBuiltInTemplates();
+    const id = templateId ? String(templateId) : '';
+    return list.find((t) => String(t.id) === id) || list[0] || getBuiltInTemplates()[0];
+  }
+  function fillPlaceholders(s, vars) {
+    return String(s || '').replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, k) => (vars[k] !== undefined ? String(vars[k]) : ''));
+  }
+
+  const tpl = pickTemplate(f.templateId || state.constructorForm.templateId);
+  const headerRaw = (tpl?.content?.header && (tpl.content.header[lang] || tpl.content.header[ru ? 'ru' : 'en'] || tpl.content.header.ru || tpl.content.header.en)) || '';
+  const titleRaw = (tpl?.content?.title && (tpl.content.title[lang] || tpl.content.title[ru ? 'ru' : 'en'] || tpl.content.title.ru || tpl.content.title.en)) || '';
+  const bodyRaw = (tpl?.content?.body && (tpl.content.body[lang] || tpl.content.body[ru ? 'ru' : 'en'] || tpl.content.body.ru || tpl.content.body.en)) || '';
+  const allText = [headerRaw, titleRaw, bodyRaw].join('\n');
+  const keyRe = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
+  const keysSet = new Set();
+  let m;
+  while ((m = keyRe.exec(allText))) { if (m[1]) keysSet.add(m[1]); }
+  const vars = {};
+  keysSet.forEach((key) => {
+    const raw = (f.fields && f.fields[key] != null) ? f.fields[key] : (f[key] != null ? f[key] : '');
+    const s = String(raw ?? '').trim();
+    vars[key] = s || (key === 'extraInfo' ? '' : '___________');
+  });
+  const header = (headerRaw && headerRaw.trim()) ? fillPlaceholders(headerRaw.trim(), vars) : '';
+  const title = fillPlaceholders(titleRaw, vars);
+  const body = fillPlaceholders(bodyRaw, vars);
+  const parts = [];
+  if (header) parts.push(header);
+  if (title) parts.push(title);
+  if (body) parts.push(body);
+  return parts.join('\n\n\n').trim();
+}
+
 function getLetterPreview() {
   return getLetterPreviewFromData(state.constructorForm);
 }
@@ -2545,6 +2586,18 @@ function fullNameToShort(fullName) {
 }
 
 function buildPdfDocumentHtml(f, ru) {
+  if (f && f.fullTextOverride && String(f.fullTextOverride).trim()) {
+    function escapeHtml(s) {
+      if (s == null || s === '') return '';
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+    const src = String(f.fullTextOverride).replace(/\r\n/g, '\n').trim();
+    const html = `<div style="font-size:10pt; line-height:1.5; white-space:pre-wrap;">${escapeHtml(src).replace(/\n/g, '<br>')}</div>`;
+    return html;
+  }
+
   const lang = ru ? 'ru' : 'en';
 
   function pickTemplate(templateId) {
@@ -2767,7 +2820,7 @@ function openAdminOrderModal(order) {
   const variables = getTemplateVariables(tpl);
   const fields = data.fields && typeof data.fields === 'object' ? { ...data.fields } : { ...data };
 
-  const preview = getLetterPreviewFromData(order?.data);
+  const fullPreview = getFullDocumentTextFromData(order?.data);
 
   const formRows = variables.map((v) => {
     const val = fields[v.key] != null ? String(fields[v.key]) : '';
@@ -2780,11 +2833,21 @@ function openAdminOrderModal(order) {
     `;
   }).join('');
 
+  const editFullTextLabel = isRu ? 'Редактировать весь текст заказа' : 'Edit full order text';
+  const fullPreviewForPre = (fullPreview || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&/g, '&amp;');
+  const fullPreviewForTextarea = (fullPreview || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   overlay.innerHTML = `
     <div class="modal-content" style="max-width:800px;width:100%;max-height:90vh;overflow:auto">
       <h3 class="modal-title">${tProfile.orderPreview}</h3>
-      <div class="modal-preview preview-letter" style="max-height:260px;overflow:auto;margin-bottom:16px;">
-        <pre style="white-space:pre-wrap;font-size:13px;margin:0">${(preview || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+      <div class="modal-preview preview-letter" style="max-height:320px;overflow:auto;margin-bottom:12px;">
+        <pre id="admin-full-preview" style="white-space:pre-wrap;font-size:13px;margin:0">${fullPreviewForPre}</pre>
+      </div>
+      <div class="field" style="margin-bottom:12px">
+        <button type="button" class="secondary-btn" id="admin-toggle-full-text-edit">${editFullTextLabel}</button>
+      </div>
+      <div id="admin-full-text-edit-wrap" style="display:none;margin-bottom:16px">
+        <div class="stacked-label" style="margin-bottom:6px">${editFullTextLabel}</div>
+        <textarea class="textarea input" id="admin-full-text-edit" rows="14" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:13px">${fullPreviewForTextarea}</textarea>
       </div>
       <div class="field" style="margin-bottom:16px">
         <div class="stacked-label">${isRu ? 'Данные документа (для правки экспертом)' : 'Document data (expert edits)'}</div>
@@ -2810,6 +2873,18 @@ function openAdminOrderModal(order) {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   overlay.querySelector('#admin-modal-close').addEventListener('click', close);
 
+  overlay.querySelector('#admin-toggle-full-text-edit').addEventListener('click', () => {
+    const wrap = overlay.querySelector('#admin-full-text-edit-wrap');
+    const pre = overlay.querySelector('#admin-full-preview');
+    const ta = overlay.querySelector('#admin-full-text-edit');
+    if (wrap.style.display === 'none') {
+      wrap.style.display = 'block';
+    } else {
+      if (pre && ta) pre.textContent = ta.value;
+      wrap.style.display = 'none';
+    }
+  });
+
   function collectUpdatedData() {
     const nextFields = { ...fields };
     overlay.querySelectorAll('.admin-order-field').forEach((input) => {
@@ -2818,6 +2893,10 @@ function openAdminOrderModal(order) {
       nextFields[key] = input.value;
     });
     const nextData = { ...data, fields: nextFields };
+    const fullTextEl = overlay.querySelector('#admin-full-text-edit');
+    if (fullTextEl && fullTextEl.value && String(fullTextEl.value).trim()) {
+      nextData.fullTextOverride = String(fullTextEl.value).trim();
+    }
     return nextData;
   }
 
