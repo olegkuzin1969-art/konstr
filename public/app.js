@@ -1177,7 +1177,7 @@ const I18N = {
         emailForReply: "Email, на который вы готовы получать официальный ответ по обращению.",
         extraInfo: "Любые дополнительные сведения, которые важны для вашей ситуации (например, описание проблемы, особенности дома или договора)."
       },
-      withExpert: "Хочу проверку эксперта (цена указана выше)",
+      withExpert: "Хочу проверку эксперта (+ дополнительная оплата)",
       saveDraft: "Сохранить черновик",
       createOrder: "Создать заказ",
       hint:
@@ -2473,17 +2473,24 @@ function getLetterPreviewFromData(f) {
   }
 
   const tpl = pickTemplate(f.templateId || state.constructorForm.templateId);
-  const variableList = getTemplateVariables(tpl);
-  const vars = {};
-  variableList.forEach((v) => {
-    const raw = (f.fields && f.fields[v.key] != null) ? f.fields[v.key] : (f[v.key] != null ? f[v.key] : '');
-    const s = String(raw ?? '').trim();
-    vars[v.key] = s || (v.key === 'extraInfo' ? '' : '___________');
-  });
-
   const headerRaw = (tpl?.content?.header && (tpl.content.header[lang] || tpl.content.header[ru ? 'ru' : 'en'] || tpl.content.header.ru || tpl.content.header.en)) || '';
   const titleRaw = (tpl?.content?.title && (tpl.content.title[lang] || tpl.content.title[ru ? 'ru' : 'en'] || tpl.content.title.ru || tpl.content.title.en)) || '';
   const bodyRaw = (tpl?.content?.body && (tpl.content.body[lang] || tpl.content.body[ru ? 'ru' : 'en'] || tpl.content.body.ru || tpl.content.body.en)) || '';
+  // Собираем все ключи {{key}} из шапки, заголовка и тела, чтобы данные подставлялись во весь шаблон
+  const allText = [headerRaw, titleRaw, bodyRaw].join('\n');
+  const keyRe = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
+  const keysSet = new Set();
+  let m;
+  while ((m = keyRe.exec(allText))) {
+    if (m[1]) keysSet.add(m[1]);
+  }
+  const vars = {};
+  keysSet.forEach((key) => {
+    const raw = (f.fields && f.fields[key] != null) ? f.fields[key] : (f[key] != null ? f[key] : '');
+    const s = String(raw ?? '').trim();
+    vars[key] = s || (key === 'extraInfo' ? '' : '___________');
+  });
+
   const title = fillPlaceholders(titleRaw, vars);
   const header = (headerRaw && headerRaw.trim()) ? fillPlaceholders(headerRaw.trim(), vars) : '';
   const body = fillPlaceholders(bodyRaw, vars);
@@ -2553,20 +2560,26 @@ function buildPdfDocumentHtml(f, ru) {
   }
 
   const tpl = pickTemplate(f.templateId || state.constructorForm.templateId);
-  const variableList = getTemplateVariables(tpl);
-  const vars = {};
-  variableList.forEach((v) => {
-    const raw = (f.fields && f.fields[v.key] != null) ? f.fields[v.key] : (f[v.key] != null ? f[v.key] : '');
-    const s = String(raw ?? '').trim();
-    vars[v.key] = s || (v.key === 'extraInfo' ? '' : '___________');
-  });
-
   const headerRaw = (tpl?.content?.header && (tpl.content.header[lang] || tpl.content.header.ru || tpl.content.header.en)) || '';
   const titleRaw = (tpl?.content?.title && (tpl.content.title[lang] || tpl.content.title.ru || tpl.content.title.en)) || '';
   const bodyRaw = (tpl?.content?.body && (tpl.content.body[lang] || tpl.content.body.ru || tpl.content.body.en)) || '';
+  // Собираем все ключи {{key}} из шапки, заголовка и тела — данные подставляются во весь шаблон (в т.ч. в тело)
+  const allText = [headerRaw, titleRaw, bodyRaw].join('\n');
+  const keyRe = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
+  const keysSet = new Set();
+  let keyM;
+  while ((keyM = keyRe.exec(allText))) {
+    if (keyM[1]) keysSet.add(keyM[1]);
+  }
+  const vars = {};
+  keysSet.forEach((key) => {
+    const raw = (f.fields && f.fields[key] != null) ? f.fields[key] : (f[key] != null ? f[key] : '');
+    const s = String(raw ?? '').trim();
+    vars[key] = s || (key === 'extraInfo' ? '' : '___________');
+  });
+
   const titleText = fillPlaceholders(titleRaw, vars);
   const bodyText = fillPlaceholders(bodyRaw, vars);
-
   const headerText = (headerRaw && headerRaw.trim()) ? fillPlaceholders(headerRaw.trim(), vars) : '';
   const headerBlock = headerText ? `<p style="margin:0;white-space:pre-wrap;line-height:1.5;">${escapeHtml(headerText)}</p>` : '';
 
