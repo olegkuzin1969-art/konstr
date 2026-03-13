@@ -1575,7 +1575,7 @@ const I18N = {
       resetTheme: "Сбросить по умолчанию",
       themeSaved: "Оформление сохранено",
       themeReset: "Оформление сброшено к стандартному",
-      textsTitle: "Тексты сайта (кроме админки)",
+      textsTitle: "Тексты сайта",
       textsHint: "Изменения применяются ко всем пользователям. Ключ — системное имя текста (секция.поле).",
       textsKey: "Ключ",
       textsRu: "Текст (RU)",
@@ -1610,6 +1610,9 @@ const I18N = {
       deleteDraft: "Удалить",
     },
     alerts: {
+      disclaimerTitle: "Важно",
+      disclaimerText:
+        "«Конструкт» — это инструмент-помощник для подготовки обращений и документов. Он не является юридической консультацией и не заменяет профессиональную помощь. Команда сервиса не несёт ответственности за принятые вами решения, корректность введённых данных и результаты использования подготовленных документов.",
       draftSaved:
         "Черновик конструктора сохранён (локально, в памяти страницы).",
       mustLogin: "Сначала войдите или зарегистрируйтесь.",
@@ -1929,6 +1932,9 @@ const I18N = {
 `,
     },
     alerts: {
+      disclaimerTitle: "Important",
+      disclaimerText:
+        "\"Konstruct\" is an assistant tool for drafting requests and documents. It is not legal advice and does not replace professional support. The team is not responsible for your decisions, the correctness of the data you provide, or the results of using the generated documents.",
       draftSaved: "Draft saved (locally in the page memory).",
       mustLogin: "Please log in or sign up first.",
       orderCreated: (id) =>
@@ -2098,7 +2104,7 @@ Keys <code>footer.linkCodeUrl</code>, <code>footer.linkDeclarationUrl</code>, <c
       resetTheme: "Reset to default",
       themeSaved: "Appearance saved",
       themeReset: "Appearance reset to default",
-      textsTitle: "Site texts (excluding admin)",
+      textsTitle: "Site texts",
       textsHint: "Changes apply to all users. Key is the internal text identifier (section.field).",
       textsKey: "Key",
       textsRu: "Text (RU)",
@@ -4503,19 +4509,18 @@ async function renderAdmin() {
                             </tr>`
                           );
                         };
-                        const traverse = (obj, prefix, excludeAdmin) => {
+                        const traverse = (obj, prefix) => {
                           Object.keys(obj || {}).forEach((k) => {
-                            if (excludeAdmin && k === 'admin') return;
                             const val = obj[k];
                             const path = prefix ? prefix + '.' + k : k;
                             if (typeof val === 'string') {
                               addRow(path);
                             } else if (val && typeof val === 'object') {
-                              traverse(val, path, false);
+                              traverse(val, path);
                             }
                           });
                         };
-                        traverse(I18N_BASE.ru, '', true);
+                        traverse(I18N_BASE.ru, '');
                         return rows.join('');
                       })()
                     }
@@ -5508,11 +5513,13 @@ function ensureDisclaimerModal() {
   overlay.className = "modal-overlay";
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,0.4);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;backdrop-filter:blur(3px);box-sizing:border-box;";
 
-  const title = state.lang === "ru" ? "Важно" : "Important";
+  const dictAlerts = (I18N[state.lang] && I18N[state.lang].alerts) || {};
+  const title = dictAlerts.disclaimerTitle || (state.lang === "ru" ? "Важно" : "Important");
   const text =
-    state.lang === "ru"
+    dictAlerts.disclaimerText ||
+    (state.lang === "ru"
       ? "«Конструкт» — это инструмент-помощник для подготовки обращений и документов. Он не является юридической консультацией и не заменяет профессиональную помощь. Команда сервиса не несёт ответственности за принятые вами решения, корректность введённых данных и результаты использования подготовленных документов."
-      : "\"Konstruct\" is an assistant tool for drafting requests and documents. It is not legal advice and does not replace professional support. The team is not responsible for your decisions, the correctness of the data you provide, or the results of using the generated documents.";
+      : "\"Konstruct\" is an assistant tool for drafting requests and documents. It is not legal advice and does not replace professional support. The team is not responsible for your decisions, the correctness of the data you provide, or the results of using the generated documents.");
 
   overlay.innerHTML = `
     <div class="modal-content">
