@@ -5601,8 +5601,6 @@ function initShell() {
     navInstructionBtn.addEventListener("click", openNavInstructionModal);
   }
 
-  showDisclaimerOnFirstVisit();
-
   window.addEventListener("hashchange", () => {
     const hash = window.location.hash || "";
     const scrollToTop = hash === "" || hash === "#" || hash === "#hero" ||
@@ -5618,8 +5616,13 @@ function initShell() {
   const hasPayment = new URLSearchParams(window.location.search).get('payment');
   if (hasPayment) showPaymentReturnLoader();
   Promise.all([initAppConfig(), initAuth()]).then(() => {
-    if (hasPayment) applyPaymentReturn();
-    else render();
+    if (hasPayment) {
+      applyPaymentReturn();
+    } else {
+      render();
+    }
+    // Показываем дисклеймер только после загрузки конфигурации и применения текстов из БД
+    showDisclaimerOnFirstVisit();
   });
 }
 
